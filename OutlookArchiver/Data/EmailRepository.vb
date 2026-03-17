@@ -1,3 +1,7 @@
+Option Explicit On
+Option Strict On
+Option Infer Off
+
 Imports System.Data.SQLite
 Imports System.Text
 
@@ -240,10 +244,10 @@ SELECT last_insert_rowid();"
         End Function
 
         ' ════════════════════════════════════════════════════════════
-        '  全文検索（FTS5）
+        '  全文検索（FTS4）
         ' ════════════════════════════════════════════════════════════
 
-        ''' <summary>FTS5 でメールを全文検索する。</summary>
+        ''' <summary>FTS4 でメールを全文検索する。結果は受信日時降順。</summary>
         Public Function SearchEmails(query As String,
                                      Optional folderName As String = Nothing) As List(Of Models.Email)
             Dim sb As New StringBuilder(
@@ -251,7 +255,7 @@ SELECT last_insert_rowid();"
             If Not String.IsNullOrEmpty(folderName) Then
                 sb.Append(" AND e.folder_name = @folder_name")
             End If
-            sb.Append(" ORDER BY rank")
+            sb.Append(" ORDER BY e.received_at DESC")
 
             Dim result As New List(Of Models.Email)
             Using conn As SQLiteConnection = _dbManager.GetConnection()

@@ -1,3 +1,7 @@
+Option Explicit On
+Option Strict On
+Option Infer Off
+
 Imports System.Data.SQLite
 Imports System.IO
 
@@ -101,59 +105,61 @@ CREATE INDEX IF NOT EXISTS idx_attachments_email_id      ON attachments(email_id
             ExecuteNonQuery(conn, sql)
         End Sub
 
-        ' ── FTS5 仮想テーブル ─────────────────────────────────────
+        ' ── FTS4 仮想テーブル ─────────────────────────────────────
+        ' FTS5 は SQLite.Interop.dll のビルドによっては無効な場合があるため FTS4 を使用する。
+        ' FTS4 は content= でコンテンツテーブルを指定でき、rowid で紐付けられる。
 
         Private Sub CreateFtsTables(conn As SQLiteConnection)
             Dim sql As String = "
-CREATE VIRTUAL TABLE IF NOT EXISTS emails_fts USING fts5(
+CREATE VIRTUAL TABLE IF NOT EXISTS emails_fts USING fts4(
+    content=""emails"",
     subject,
     body_text,
     sender_name,
-    sender_email,
-    content='emails',
-    content_rowid='id'
+    sender_email
 );
 
-CREATE VIRTUAL TABLE IF NOT EXISTS attachments_fts USING fts5(
-    file_name,
-    content='attachments',
-    content_rowid='id'
+CREATE VIRTUAL TABLE IF NOT EXISTS attachments_fts USING fts4(
+    content=""attachments"",
+    file_name
 );"
             ExecuteNonQuery(conn, sql)
         End Sub
 
-        ' ── FTS5 同期トリガー ─────────────────────────────────────
+        ' ── FTS4 同期トリガー ─────────────────────────────────────
+        ' FTS4 の削除は DELETE FROM ... WHERE rowid = を使う（FTS5 の 'delete' 特殊構文は不要）。
 
         Private Sub CreateFtsTriggers(conn As SQLiteConnection)
             ' emails_fts を emails テーブルと同期するトリガー
-            Dim sql As String = "
+            Dim sqlInsert As String = "
 CREATE TRIGGER IF NOT EXISTS emails_ai AFTER INSERT ON emails BEGIN
     INSERT INTO emails_fts(rowid, subject, body_text, sender_name, sender_email)
     VALUES (new.id, new.subject, new.body_text, new.sender_name, new.sender_email);
-END;
-
+END;"
+            Dim sqlDelete As String = "
 CREATE TRIGGER IF NOT EXISTS emails_ad AFTER DELETE ON emails BEGIN
-    INSERT INTO emails_fts(emails_fts, rowid, subject, body_text, sender_name, sender_email)
-    VALUES ('delete', old.id, old.subject, old.body_text, old.sender_name, old.sender_email);
-END;
-
+    DELETE FROM emails_fts WHERE rowid = old.id;
+END;"
+            Dim sqlUpdate As String = "
 CREATE TRIGGER IF NOT EXISTS emails_au AFTER UPDATE ON emails BEGIN
-    INSERT INTO emails_fts(emails_fts, rowid, subject, body_text, sender_name, sender_email)
-    VALUES ('delete', old.id, old.subject, old.body_text, old.sender_name, old.sender_email);
+    DELETE FROM emails_fts WHERE rowid = old.id;
     INSERT INTO emails_fts(rowid, subject, body_text, sender_name, sender_email)
     VALUES (new.id, new.subject, new.body_text, new.sender_name, new.sender_email);
-END;
-
+END;"
+            Dim sqlAttachInsert As String = "
 CREATE TRIGGER IF NOT EXISTS attachments_ai AFTER INSERT ON attachments BEGIN
     INSERT INTO attachments_fts(rowid, file_name)
     VALUES (new.id, new.file_name);
-END;
-
-CREATE TRIGGER IF NOT EXISTS attachments_ad AFTER DELETE ON attachments BEGIN
-    INSERT INTO attachments_fts(attachments_fts, rowid, file_name)
-    VALUES ('delete', old.id, old.file_name);
 END;"
-            ExecuteNonQuery(conn, sql)
+            Dim sqlAttachDelete As String = "
+CREATE TRIGGER IF NOT EXISTS attachments_ad AFTER DELETE ON attachments BEGIN
+    DELETE FROM attachments_fts WHERE rowid = old.id;
+END;"
+            ExecuteNonQuery(conn, sqlInsert)
+            ExecuteNonQuery(conn, sqlDelete)
+            ExecuteNonQuery(conn, sqlUpdate)
+            ExecuteNonQuery(conn, sqlAttachInsert)
+            ExecuteNonQuery(conn, sqlAttachDelete)
         End Sub
 
         ' ── ユーティリティ ────────────────────────────────────────
