@@ -194,10 +194,30 @@ ImportService.ImportFolder(folderName)
 
 ### メール一覧: 添付アイコン・サイズ列
 
-- **添付アイコン**: `ImageList` + GDI+ 描画のペーパークリップアイコンを件名列左に表示（`HasAttachments` で切り替え）
+- **添付アイコン**: `ImageList` + GDI+ 描画のペーパークリップアイコンを添付列（index 0）に表示
+  - WinForms ListView の `SmallImageList` は常に列 0 に描画される仕様のため、添付列を `Columns.Insert(0, ...)` で先頭に挿入することで件名と分離
 - **サイズ列**: `MailItem.Size`（バイト）を DB の `email_size` 列に保存し、一覧に KB/MB 単位で表示
   - 1 MB 以上: `x.x MB`、未満: `x KB`
 - **DBマイグレーション**: `DatabaseManager.ApplyMigrations()` で既存 DB に `ALTER TABLE emails ADD COLUMN email_size` を適用
+
+### メール一覧: 列操作
+
+- **列ソート**: 列ヘッダークリックで昇順/降順切り替え。ヘッダーテキストに `↑` / `↓` を付与
+  - デフォルト: 受信日時 降順
+  - 検索・フォルダ切り替え後も現在のソート設定を維持
+- **列並び替え**: `AllowColumnReorder = True` でドラッグ＆ドロップによる列移動
+- **設定の永続化**: アプリ終了時（`FormClosing`）に列幅・列表示順・ソート設定を `App.config` へ保存し、次回起動時に復元
+  - `AppSettings` に `EmailListColumnWidths` / `EmailListColumnOrder` / `EmailListSortColumn` / `EmailListSortAscending` を追加
+
+### 添付ファイル保存バグ修正
+
+- **原因**: `OutlookService.SaveAttachments` が相対パスを Outlook COM の `SaveAsFile` に渡していた。`Directory.CreateDirectory` は .NET プロセスの作業ディレクトリで成功（フォルダのみ作成）するが、Outlook COM は Outlook 自身の作業ディレクトリを基準にパスを解釈するため保存失敗
+- **修正**: `Path.GetFullPath(...)` で絶対パスに変換してから `SaveAsFile` に渡す
+- **その他の改善**:
+  - ディレクトリ作成を遅延化（実際に保存するファイルがある場合のみ作成、空フォルダを残さない）
+  - `HasAttachments` フラグを OLE 埋め込みオブジェクト（メール署名の画像等）を除いたカウントで判定するよう修正
+  - 保存エラーを `ImportResult.Errors` に追加して取り込み結果ダイアログに表示
+  - `EmailRepository.GetAttachmentsByEmailId` で DB の相対パスを絶対パスに変換して返す
 
 ---
 
