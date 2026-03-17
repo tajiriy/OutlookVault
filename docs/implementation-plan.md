@@ -171,7 +171,7 @@ ImportService.ImportFolder(folderName)
 
 ---
 
-## Phase 6: 検索・削除・設定
+## Phase 6: 検索・削除・設定 ✅
 
 **目標**: 全文検索、削除、設定フォーム
 
