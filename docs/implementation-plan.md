@@ -76,7 +76,7 @@ CREATE TABLE deleted_message_ids (
 
 ---
 
-## Phase 2: Outlook 取り込み
+## Phase 2: Outlook 取り込み ✅
 
 **目標**: Outlook COM APIでメールを取得しDBに保存
 
