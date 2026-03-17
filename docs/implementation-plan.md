@@ -148,7 +148,7 @@ ImportService.ImportFolder(folderName)
 
 ---
 
-## Phase 5: 会話ビュー
+## Phase 5: 会話ビュー ✅
 
 **目標**: スレッド表示・返信引用の自動除去
 
