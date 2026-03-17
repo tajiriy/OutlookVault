@@ -98,10 +98,11 @@ Public Class MainForm
         UpdateStatusBar()
     End Sub
 
-    ''' <summary>メール一覧で行が選択されたときにプレビューを更新する。</summary>
+    ''' <summary>メール一覧で行が選択されたときにプレビューと会話ビューを更新する。</summary>
     Private Sub listViewEmails_SelectedIndexChanged(sender As Object, e As EventArgs) Handles listViewEmails.SelectedIndexChanged
         If listViewEmails.SelectedIndices.Count = 0 Then
             emailPreview.ClearPreview()
+            conversationView.ClearView()
             Return
         End If
 
@@ -111,7 +112,23 @@ Public Class MainForm
         Dim email As Models.Email = _repo.GetEmailById(_emailCache(idx).Id)
         If email IsNot Nothing Then
             emailPreview.ShowEmail(email)
+            LoadConversationView(email)
         End If
+    End Sub
+
+    ''' <summary>選択メールのスレッドを取得して会話ビューに表示する。</summary>
+    Private Sub LoadConversationView(email As Models.Email)
+        Dim threadEmails As List(Of Models.Email)
+        If String.IsNullOrEmpty(email.ThreadId) Then
+            ' スレッドIDなし → 単独メールとして表示
+            threadEmails = New List(Of Models.Email)() From {email}
+        Else
+            threadEmails = _repo.GetEmailsByThreadId(email.ThreadId)
+            If threadEmails.Count = 0 Then
+                threadEmails = New List(Of Models.Email)() From {email}
+            End If
+        End If
+        conversationView.ShowThread(threadEmails, email.Id)
     End Sub
 
     ''' <summary>VirtualMode: 指定インデックスのListViewItemを返す。</summary>

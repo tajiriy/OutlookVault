@@ -53,6 +53,7 @@ Partial Class MainForm
         Me.lblStatusSep = New System.Windows.Forms.ToolStripStatusLabel()
         Me.lblStatusLastImport = New System.Windows.Forms.ToolStripStatusLabel()
         Me.emailPreview = New OutlookArchiver.Controls.EmailPreviewControl()
+        Me.conversationView = New OutlookArchiver.Controls.ConversationViewControl()
         Me.menuStrip.SuspendLayout()
         Me.toolStrip.SuspendLayout()
         CType(Me.splitMain, System.ComponentModel.ISupportInitialize).BeginInit()
@@ -65,6 +66,7 @@ Partial Class MainForm
         Me.splitRight.SuspendLayout()
         Me.tabControl.SuspendLayout()
         Me.tabPageNormal.SuspendLayout()
+        Me.tabPageThread.SuspendLayout()
         Me.statusStrip.SuspendLayout()
         Me.SuspendLayout()
         '
@@ -269,12 +271,21 @@ Partial Class MainForm
         '
         'tabPageThread
         '
+        Me.tabPageThread.Controls.Add(Me.conversationView)
         Me.tabPageThread.Location = New System.Drawing.Point(4, 22)
         Me.tabPageThread.Name = "tabPageThread"
         Me.tabPageThread.Size = New System.Drawing.Size(1109, 378)
         Me.tabPageThread.TabIndex = 1
         Me.tabPageThread.Text = "会話ビュー"
         Me.tabPageThread.UseVisualStyleBackColor = True
+        '
+        'conversationView
+        '
+        Me.conversationView.Dock = System.Windows.Forms.DockStyle.Fill
+        Me.conversationView.Location = New System.Drawing.Point(0, 0)
+        Me.conversationView.Name = "conversationView"
+        Me.conversationView.Size = New System.Drawing.Size(1109, 378)
+        Me.conversationView.TabIndex = 0
         '
         'statusStrip
         '
@@ -336,6 +347,7 @@ Partial Class MainForm
         Me.splitRight.ResumeLayout(False)
         Me.tabControl.ResumeLayout(False)
         Me.tabPageNormal.ResumeLayout(False)
+        Me.tabPageThread.ResumeLayout(False)
         Me.statusStrip.ResumeLayout(False)
         Me.statusStrip.PerformLayout()
         Me.ResumeLayout(False)
@@ -370,6 +382,7 @@ Partial Class MainForm
     Friend WithEvents tabPageNormal As System.Windows.Forms.TabPage
     Friend WithEvents tabPageThread As System.Windows.Forms.TabPage
     Friend WithEvents emailPreview As Controls.EmailPreviewControl
+    Friend WithEvents conversationView As Controls.ConversationViewControl
     Friend WithEvents statusStrip As System.Windows.Forms.StatusStrip
     Friend WithEvents lblStatusCount As System.Windows.Forms.ToolStripStatusLabel
     Friend WithEvents lblStatusSep As System.Windows.Forms.ToolStripStatusLabel

@@ -90,7 +90,15 @@
     <Compile Include="Data\EmailRepository.vb" />
     <Compile Include="Services\ImportService.vb" />
     <Compile Include="Services\OutlookService.vb" />
+    <Compile Include="Services\QuoteStripperService.vb" />
     <Compile Include="Services\ThreadingService.vb" />
+    <Compile Include="Controls\ConversationViewControl.vb">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\ConversationViewControl.Designer.vb">
+      <DependentUpon>ConversationViewControl.vb</DependentUpon>
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="MainForm.vb">
       <SubType>Form</SubType>
     </Compile>
