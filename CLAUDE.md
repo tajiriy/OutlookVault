@@ -9,12 +9,14 @@ OutlookArchiver は .NET Framework 4.6.2 / VB.NET の Windows Forms デスクト
 ## ビルド・実行コマンド
 
 ```bash
-# ビルド
-msbuild OutlookArchiver/OutlookArchiver.vbproj
+# ビルド（Debug）
+./build.sh
 
 # リリースビルド
-msbuild OutlookArchiver/OutlookArchiver.vbproj /p:Configuration=Release
+./build.sh Release
 ```
+
+> `build.sh` を必ず使用すること。直接 `msbuild` コマンドは使わない。
 
 ## 技術スタック
 

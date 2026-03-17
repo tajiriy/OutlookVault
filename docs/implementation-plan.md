@@ -130,7 +130,7 @@ ImportService.ImportFolder(folderName)
 
 ---
 
-## Phase 4: メール閲覧
+## Phase 4: メール閲覧 ✅
 
 **目標**: 選択メールのプレビュー表示・添付ファイル操作
 
