@@ -194,7 +194,7 @@ SELECT last_insert_rowid();"
         '  Attachment 取得
         ' ════════════════════════════════════════════════════════════
 
-        ''' <summary>指定メール ID の添付ファイル一覧を返す。</summary>
+        ''' <summary>指定メール ID の添付ファイル一覧を返す。FilePath は絶対パスに変換済み。</summary>
         Public Function GetAttachmentsByEmailId(emailId As Integer) As List(Of Models.Attachment)
             Const sql As String = "SELECT * FROM attachments WHERE email_id = @email_id"
             Dim result As New List(Of Models.Attachment)
@@ -208,6 +208,15 @@ SELECT last_insert_rowid();"
                     End Using
                 End Using
             End Using
+
+            ' DB には相対パスが格納されているため絶対パスに変換する
+            Dim baseDir As String = IO.Path.GetFullPath(Config.AppSettings.Instance.AttachmentDirectory)
+            For Each att As Models.Attachment In result
+                If Not IO.Path.IsPathRooted(att.FilePath) Then
+                    att.FilePath = IO.Path.Combine(baseDir, att.FilePath)
+                End If
+            Next
+
             Return result
         End Function
 

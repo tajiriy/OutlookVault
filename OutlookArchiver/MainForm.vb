@@ -21,6 +21,11 @@ Public Class MainForm
     Private _autoImportEnabled As Boolean
     Private _searchQuery As String        ' 現在の検索クエリ（Nothing = 検索なし）
 
+    ' 列インデックス: 0=添付 1=件名 2=差出人 3=受信日時 4=サイズ
+    Private _sortColumn As Integer = 3          ' デフォルト: 受信日時
+    Private _sortAscending As Boolean = False   ' デフォルト: 降順
+    Private ReadOnly _colBaseNames As String() = {"添付", "件名", "差出人", "受信日時", "サイズ"}
+
     ' ════════════════════════════════════════════════════════════
     '  フォーム初期化
     ' ════════════════════════════════════════════════════════════
@@ -52,28 +57,44 @@ Public Class MainForm
         _emailCache = New List(Of Models.Email)()
     End Sub
 
-    ''' <summary>メール一覧のアイコン用 ImageList とサイズ列をコードで設定する。</summary>
+    ''' <summary>メール一覧の列を設定し、列順・ソート設定を復元する。</summary>
     Private Sub SetupEmailListColumns()
-        ' ── ImageList（添付アイコン）──────────────────────────────
-        Dim imgList As New ImageList()
-        imgList.ImageSize = New Drawing.Size(16, 16)
-        imgList.ColorDepth = ColorDepth.Depth32Bit
+        ' ── 添付列（index 0 に挿入 → SmallImageList アイコンが添付列に表示される）──
+        Dim colAttach As New ColumnHeader()
+        colAttach.Text = "添付"
+        colAttach.Width = 30
+        listViewEmails.Columns.Insert(0, colAttach)
 
-        ' Index 0: 空白（添付なし）
-        Dim blankBmp As New Drawing.Bitmap(16, 16)
-        imgList.Images.Add(blankBmp)
-
-        ' Index 1: ペーパークリップ（添付あり）
-        imgList.Images.Add(CreatePaperclipIcon())
-
-        listViewEmails.SmallImageList = imgList
-
-        ' ── サイズ列 ──────────────────────────────────────────────
+        ' ── サイズ列（末尾に追加、index 4）─────────────────────────
         Dim colSize As New ColumnHeader()
         colSize.Text = "サイズ"
         colSize.Width = 80
         colSize.TextAlign = HorizontalAlignment.Right
         listViewEmails.Columns.Add(colSize)
+
+        ' ── SmallImageList（添付アイコン）──────────────────────────
+        Dim imgList As New ImageList()
+        imgList.ImageSize = New Drawing.Size(16, 16)
+        imgList.ColorDepth = ColorDepth.Depth32Bit
+        imgList.Images.Add(New Drawing.Bitmap(16, 16))  ' index 0: 空白（添付なし）
+        imgList.Images.Add(CreatePaperclipIcon())       ' index 1: ペーパークリップ
+        listViewEmails.SmallImageList = imgList
+
+        ' ── 列の並び替えを許可 ────────────────────────────────────
+        listViewEmails.AllowColumnReorder = True
+
+        ' ── ソート設定を復元 ──────────────────────────────────────
+        _sortColumn = _settings.EmailListSortColumn
+        _sortAscending = _settings.EmailListSortAscending
+
+        ' ── 列幅を復元 ────────────────────────────────────────────
+        RestoreColumnWidths()
+
+        ' ── 列順を復元 ────────────────────────────────────────────
+        RestoreColumnOrder()
+
+        ' ── ソートインジケーターを更新 ───────────────────────────
+        UpdateColumnSortIndicator()
     End Sub
 
     ''' <summary>16×16 のペーパークリップアイコンを GDI+ で描画して返す。</summary>
@@ -85,11 +106,8 @@ Public Class MainForm
             Using pen As New Drawing.Pen(Drawing.Color.FromArgb(80, 120, 190), 1.5F)
                 pen.StartCap = Drawing.Drawing2D.LineCap.Round
                 pen.EndCap = Drawing.Drawing2D.LineCap.Round
-                ' 外側ループ（大きな弧）
                 g.DrawArc(pen, 2, 1, 10, 13, 40, 280)
-                ' 内側折り返し（小さな弧）
                 g.DrawArc(pen, 4, 4, 6, 7, 40, 180)
-                ' 下端の接続線
                 g.DrawLine(pen, 12, 9, 12, 14)
             End Using
         End Using
@@ -162,6 +180,7 @@ Public Class MainForm
     ''' <summary>DBからメールを読み込んでListViewのVirtualListSizeを更新する。</summary>
     Private Sub LoadEmails(Optional folderName As String = Nothing)
         _emailCache = _repo.GetEmails(folderName, pageSize:=500)
+        SortEmailCache()
         listViewEmails.VirtualListSize = _emailCache.Count
         listViewEmails.Invalidate()
         UpdateStatusBar()
@@ -211,11 +230,13 @@ Public Class MainForm
         Dim subject As String = If(String.IsNullOrEmpty(email.Subject), "(件名なし)", email.Subject)
         Dim displaySender As String = If(Not String.IsNullOrEmpty(email.SenderName), email.SenderName, email.SenderEmail)
 
-        Dim item As New ListViewItem(subject)
+        ' col 0: 添付（SmallImageList アイコン、テキストなし）
+        Dim item As New ListViewItem(String.Empty)
         item.ImageIndex = If(email.HasAttachments, 1, 0)
-        item.SubItems.Add(If(displaySender, String.Empty))
-        item.SubItems.Add(email.ReceivedAt.ToString("yyyy/MM/dd HH:mm"))
-        item.SubItems.Add(FormatEmailSize(email.EmailSize))
+        item.SubItems.Add(subject)                                       ' col 1: 件名
+        item.SubItems.Add(If(displaySender, String.Empty))               ' col 2: 差出人
+        item.SubItems.Add(email.ReceivedAt.ToString("yyyy/MM/dd HH:mm")) ' col 3: 受信日時
+        item.SubItems.Add(FormatEmailSize(email.EmailSize))              ' col 4: サイズ
         item.Tag = email.Id
         e.Item = item
     End Sub
@@ -354,6 +375,7 @@ Public Class MainForm
 
         Try
             _emailCache = _repo.SearchEmails(query)
+            SortEmailCache()
             listViewEmails.VirtualListSize = _emailCache.Count
             listViewEmails.Invalidate()
             ' プレビューをクリア（新しい検索結果を選択するまで）
@@ -447,6 +469,139 @@ Public Class MainForm
             lblStatusCount.Text = "総数 -件"
         End Try
         lblStatusLastImport.Text = "最終取り込み: -"
+    End Sub
+
+    ' ════════════════════════════════════════════════════════════
+    '  メール一覧 ソート・列設定
+    ' ════════════════════════════════════════════════════════════
+
+    ''' <summary>列名クリックでソート方向を切り替え、一覧を更新する。</summary>
+    Private Sub listViewEmails_ColumnClick(sender As Object, e As ColumnClickEventArgs) Handles listViewEmails.ColumnClick
+        If e.Column = _sortColumn Then
+            _sortAscending = Not _sortAscending
+        Else
+            _sortColumn = e.Column
+            ' 受信日時はデフォルト降順、他は昇順
+            _sortAscending = (e.Column <> 3)
+        End If
+        UpdateColumnSortIndicator()
+        SortEmailCache()
+        listViewEmails.Invalidate()
+    End Sub
+
+    ''' <summary>_emailCache を現在のソート設定で並び替える。</summary>
+    Private Sub SortEmailCache()
+        If _emailCache Is Nothing OrElse _emailCache.Count = 0 Then Return
+        Dim asc As Boolean = _sortAscending
+        Select Case _sortColumn
+            Case 0  ' 添付
+                _emailCache.Sort(Function(a As Models.Email, b As Models.Email) As Integer
+                                     Dim cmp As Integer = a.HasAttachments.CompareTo(b.HasAttachments)
+                                     Return If(asc, cmp, -cmp)
+                                 End Function)
+            Case 1  ' 件名
+                _emailCache.Sort(Function(a As Models.Email, b As Models.Email) As Integer
+                                     Dim cmp As Integer = String.Compare(
+                                         If(a.Subject, String.Empty),
+                                         If(b.Subject, String.Empty),
+                                         StringComparison.OrdinalIgnoreCase)
+                                     Return If(asc, cmp, -cmp)
+                                 End Function)
+            Case 2  ' 差出人
+                _emailCache.Sort(Function(a As Models.Email, b As Models.Email) As Integer
+                                     Dim sa As String = If(Not String.IsNullOrEmpty(a.SenderName),
+                                                           a.SenderName,
+                                                           If(a.SenderEmail, String.Empty))
+                                     Dim sb As String = If(Not String.IsNullOrEmpty(b.SenderName),
+                                                           b.SenderName,
+                                                           If(b.SenderEmail, String.Empty))
+                                     Dim cmp As Integer = String.Compare(sa, sb, StringComparison.OrdinalIgnoreCase)
+                                     Return If(asc, cmp, -cmp)
+                                 End Function)
+            Case 3  ' 受信日時
+                _emailCache.Sort(Function(a As Models.Email, b As Models.Email) As Integer
+                                     Dim cmp As Integer = a.ReceivedAt.CompareTo(b.ReceivedAt)
+                                     Return If(asc, cmp, -cmp)
+                                 End Function)
+            Case 4  ' サイズ
+                _emailCache.Sort(Function(a As Models.Email, b As Models.Email) As Integer
+                                     Dim cmp As Integer = a.EmailSize.CompareTo(b.EmailSize)
+                                     Return If(asc, cmp, -cmp)
+                                 End Function)
+        End Select
+    End Sub
+
+    ''' <summary>現在のソート列と方向をヘッダーテキストに反映する。</summary>
+    Private Sub UpdateColumnSortIndicator()
+        If listViewEmails.Columns.Count < _colBaseNames.Length Then Return
+        For i As Integer = 0 To _colBaseNames.Length - 1
+            Dim indicator As String = If(i = _sortColumn,
+                                         If(_sortAscending, " ↑", " ↓"),
+                                         String.Empty)
+            listViewEmails.Columns(i).Text = _colBaseNames(i) & indicator
+        Next
+    End Sub
+
+    ''' <summary>AppSettings から列幅を復元する。</summary>
+    Private Sub RestoreColumnWidths()
+        Dim colWidths As String = _settings.EmailListColumnWidths
+        If String.IsNullOrEmpty(colWidths) Then Return
+
+        Dim parts() As String = colWidths.Split(","c)
+        If parts.Length <> listViewEmails.Columns.Count Then Return
+
+        For i As Integer = 0 To parts.Length - 1
+            Dim w As Integer
+            If Integer.TryParse(parts(i), w) AndAlso w > 0 Then
+                listViewEmails.Columns(i).Width = w
+            End If
+        Next
+    End Sub
+
+    ''' <summary>AppSettings から列の表示順（DisplayIndex）を復元する。</summary>
+    Private Sub RestoreColumnOrder()
+        Dim colOrder As String = _settings.EmailListColumnOrder
+        If String.IsNullOrEmpty(colOrder) Then Return
+
+        Dim parts() As String = colOrder.Split(","c)
+        If parts.Length <> listViewEmails.Columns.Count Then Return
+
+        Dim displayIndices(parts.Length - 1) As Integer
+        For i As Integer = 0 To parts.Length - 1
+            If Not Integer.TryParse(parts(i), displayIndices(i)) Then Return
+        Next
+
+        ' DisplayIndex は小さい順にセットしないと競合するため、ターゲット順に並べてから適用する
+        Dim pairs As New List(Of Tuple(Of Integer, Integer))()
+        For i As Integer = 0 To displayIndices.Length - 1
+            pairs.Add(Tuple.Create(i, displayIndices(i)))
+        Next
+        pairs.Sort(Function(a As Tuple(Of Integer, Integer), b As Tuple(Of Integer, Integer)) As Integer
+                       Return a.Item2.CompareTo(b.Item2)
+                   End Function)
+        For Each pair As Tuple(Of Integer, Integer) In pairs
+            listViewEmails.Columns(pair.Item1).DisplayIndex = pair.Item2
+        Next
+    End Sub
+
+    ''' <summary>列の表示順・列幅・ソート設定を AppSettings に保存する。</summary>
+    Private Sub SaveColumnSettings()
+        Dim count As Integer = listViewEmails.Columns.Count
+        Dim displayIndices(count - 1) As String
+        Dim widths(count - 1) As String
+        For i As Integer = 0 To count - 1
+            displayIndices(i) = listViewEmails.Columns(i).DisplayIndex.ToString()
+            widths(i) = listViewEmails.Columns(i).Width.ToString()
+        Next
+        _settings.EmailListColumnOrder = String.Join(",", displayIndices)
+        _settings.EmailListColumnWidths = String.Join(",", widths)
+        _settings.EmailListSortColumn = _sortColumn
+        _settings.EmailListSortAscending = _sortAscending
+    End Sub
+
+    ''' <summary>フォーム終了時に列設定を保存する。</summary>
+    Private Sub MainForm_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+        SaveColumnSettings()
     End Sub
 
     ' ════════════════════════════════════════════════════════════

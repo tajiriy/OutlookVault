@@ -101,7 +101,7 @@ Namespace Services
                 Dim subject As String = mailItem.Subject
 
                 Try
-                    Dim imported As Boolean = ProcessMailItem(mailItem, attachBaseDir)
+                    Dim imported As Boolean = ProcessMailItem(mailItem, attachBaseDir, result)
                     If imported Then
                         result.ImportedCount += 1
                     Else
@@ -150,7 +150,8 @@ Namespace Services
         ''' 重複・削除済みの場合は False を返す。新規保存した場合は True を返す。
         ''' </summary>
         Private Function ProcessMailItem(mailItem As Outlook.MailItem,
-                                         attachBaseDir As String) As Boolean
+                                         attachBaseDir As String,
+                                         importResult As ImportResult) As Boolean
             ' メールデータを抽出
             Dim email As Models.Email = _outlookSvc.ExtractEmailData(mailItem)
 
@@ -168,10 +169,15 @@ Namespace Services
 
             ' 添付ファイルを保存して DB に登録
             If email.HasAttachments Then
+                Dim attachSaveErrors As New List(Of String)()
                 Dim attachments As List(Of Models.Attachment) =
-                    _outlookSvc.SaveAttachments(mailItem, emailId, attachBaseDir)
+                    _outlookSvc.SaveAttachments(mailItem, emailId, attachBaseDir, attachSaveErrors)
                 For Each att As Models.Attachment In attachments
                     _repo.InsertAttachment(att)
+                Next
+                For Each errMsg As String In attachSaveErrors
+                    importResult.Errors.Add(errMsg)
+                    importResult.ErrorCount += 1
                 Next
             End If
 

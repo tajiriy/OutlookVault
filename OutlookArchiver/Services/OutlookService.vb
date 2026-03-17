@@ -171,8 +171,16 @@ Namespace Services
                 TryCast(mailItem.Parent, Outlook.MAPIFolder)
             email.FolderName = If(parentFolder IsNot Nothing, parentFolder.Name, Nothing)
 
-            ' ── 添付ファイル ────────────────────────────────────
-            email.HasAttachments = mailItem.Attachments.Count > 0
+            ' ── 添付ファイル（OLE 埋め込みを除いた実ファイル数でフラグを設定）──────
+            Dim realAttachCount As Integer = 0
+            Dim mailAtts As Outlook.Attachments = mailItem.Attachments
+            For attIdx As Integer = 1 To mailAtts.Count
+                Dim a As Outlook.Attachment = CType(mailAtts.Item(attIdx), Outlook.Attachment)
+                If a.Type <> Outlook.OlAttachmentType.olOLE Then
+                    realAttachCount += 1
+                End If
+            Next
+            email.HasAttachments = realAttachCount > 0
 
             ' ── サイズ ──────────────────────────────────────────
             email.EmailSize = mailItem.Size
@@ -191,7 +199,8 @@ Namespace Services
         ''' </summary>
         Public Function SaveAttachments(mailItem As Outlook.MailItem,
                                         emailId As Integer,
-                                        attachBaseDir As String) As List(Of Models.Attachment)
+                                        attachBaseDir As String,
+                                        Optional saveErrors As List(Of String) = Nothing) As List(Of Models.Attachment)
             Dim result As New List(Of Models.Attachment)()
             Dim atts As Outlook.Attachments = mailItem.Attachments
             If atts.Count = 0 Then Return result
@@ -199,11 +208,10 @@ Namespace Services
             Dim dateStr As String = mailItem.ReceivedTime.ToString("yyyyMMdd_HHmmss")
             Dim shortId As String = GetShortId(mailItem.EntryID)
             Dim subDir As String = dateStr & "_" & shortId
-            Dim saveDir As String = Path.Combine(attachBaseDir, subDir)
 
-            If Not Directory.Exists(saveDir) Then
-                Directory.CreateDirectory(saveDir)
-            End If
+            ' Outlook COM の SaveAsFile は相対パスを解釈できないため絶対パスに変換する
+            Dim saveDir As String = Path.GetFullPath(Path.Combine(attachBaseDir, subDir))
+            Dim dirCreated As Boolean = False
 
             For i As Integer = 1 To atts.Count
                 Dim att As Outlook.Attachment = CType(atts.Item(i), Outlook.Attachment)
@@ -213,9 +221,17 @@ Namespace Services
 
                 Dim originalName As String = att.FileName
                 Dim sanitized As String = SanitizeFileName(originalName)
-                Dim targetPath As String = GetUniqueFilePath(saveDir, sanitized)
 
                 Try
+                    ' 保存先ディレクトリを初回ファイル保存直前に作成（空フォルダを残さない）
+                    If Not dirCreated Then
+                        If Not Directory.Exists(saveDir) Then
+                            Directory.CreateDirectory(saveDir)
+                        End If
+                        dirCreated = True
+                    End If
+
+                    Dim targetPath As String = GetUniqueFilePath(saveDir, sanitized)
                     att.SaveAsFile(targetPath)
 
                     Dim fi As New FileInfo(targetPath)
@@ -226,8 +242,9 @@ Namespace Services
                     model.FileSize = fi.Length
                     result.Add(model)
                 Catch ex As Exception
-                    System.Diagnostics.Debug.WriteLine(
-                        "添付ファイル保存エラー: " & originalName & " / " & ex.Message)
+                    Dim errMsg As String = "添付保存エラー [" & originalName & "]: " & ex.Message
+                    System.Diagnostics.Debug.WriteLine(errMsg)
+                    If saveErrors IsNot Nothing Then saveErrors.Add(errMsg)
                 End Try
             Next
 

@@ -115,6 +115,48 @@ Namespace Config
             End Set
         End Property
 
+        ' ── メール一覧表示設定 ────────────────────────────────────────
+
+        ''' <summary>メール一覧の列幅（列インデックス順にピクセル値をカンマ区切りで格納）</summary>
+        Public Property EmailListColumnWidths As String
+            Get
+                Return ConfigurationManager.AppSettings("EmailListColumnWidths")
+            End Get
+            Set(value As String)
+                SaveSetting("EmailListColumnWidths", value)
+            End Set
+        End Property
+
+        ''' <summary>メール一覧の列表示順（列インデックス順に DisplayIndex をカンマ区切りで格納）</summary>
+        Public Property EmailListColumnOrder As String
+            Get
+                Return ConfigurationManager.AppSettings("EmailListColumnOrder")
+            End Get
+            Set(value As String)
+                SaveSetting("EmailListColumnOrder", value)
+            End Set
+        End Property
+
+        ''' <summary>メール一覧のソート列インデックス（0=添付 1=件名 2=差出人 3=受信日時 4=サイズ）</summary>
+        Public Property EmailListSortColumn As Integer
+            Get
+                Return GetInt("EmailListSortColumn", defaultValue:=3)
+            End Get
+            Set(value As Integer)
+                SaveSetting("EmailListSortColumn", value.ToString())
+            End Set
+        End Property
+
+        ''' <summary>メール一覧のソート方向（True: 昇順、False: 降順）</summary>
+        Public Property EmailListSortAscending As Boolean
+            Get
+                Return GetBool("EmailListSortAscending", defaultValue:=False)
+            End Get
+            Set(value As Boolean)
+                SaveSetting("EmailListSortAscending", value.ToString())
+            End Set
+        End Property
+
         ' ── ヘルパー ──────────────────────────────────────────────
 
         Private Function GetBool(key As String, defaultValue As Boolean) As Boolean
