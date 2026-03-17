@@ -103,7 +103,7 @@ ImportService.ImportFolder(folderName)
 
 ---
 
-## Phase 3: メイン UI
+## Phase 3: メイン UI ✅
 
 **目標**: 3ペインレイアウト・フォルダツリー・メール一覧
 
