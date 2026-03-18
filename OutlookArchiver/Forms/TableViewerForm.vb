@@ -160,26 +160,8 @@ Namespace Forms
                 Return
             End If
 
-            ' 全列を OR 条件でフィルタ（LIKE '%text%'）
-            Dim conditions As New List(Of String)()
-            For Each col As DataColumn In _dataTable.Columns
-                If col.DataType Is GetType(String) Then
-                    ' 特殊文字をエスケープ
-                    Dim escaped As String = filterText.Replace("'", "''").Replace("[", "[[]").Replace("%", "[%]").Replace("*", "[*]")
-                    conditions.Add(String.Format("[{0}] LIKE '%{1}%'", col.ColumnName, escaped))
-                End If
-            Next
-
-            ' 文字列列がない場合は CONVERT で対応
-            If conditions.Count = 0 Then
-                For Each col As DataColumn In _dataTable.Columns
-                    Dim escaped As String = filterText.Replace("'", "''").Replace("[", "[[]").Replace("%", "[%]").Replace("*", "[*]")
-                    conditions.Add(String.Format("CONVERT([{0}], 'System.String') LIKE '%{1}%'", col.ColumnName, escaped))
-                Next
-            End If
-
             Try
-                _dataTable.DefaultView.RowFilter = String.Join(" OR ", conditions)
+                _dataTable.DefaultView.RowFilter = Filters.FilterParser.Parse(filterText, _dataTable.Columns)
             Catch ex As Exception
                 _dataTable.DefaultView.RowFilter = ""
             End Try

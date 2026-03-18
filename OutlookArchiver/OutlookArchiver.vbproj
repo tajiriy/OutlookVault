@@ -78,6 +78,7 @@
     <Import Include="System.Threading.Tasks" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Filters\FilterParser.vb" />
     <Compile Include="Config\AppSettings.vb" />
     <Compile Include="Controls\EmailPreviewControl.vb">
       <SubType>UserControl</SubType>

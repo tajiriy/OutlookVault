@@ -71,6 +71,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Filters\FilterParserTests.vb" />
     <Compile Include="ThreadingServiceTests.vb" />
     <Compile Include="QuoteStripperServiceTests.vb" />
     <Compile Include="DatabaseManagerTests.vb" />
