@@ -290,14 +290,14 @@ Public Class MainForm
 
             Dim result As Services.ImportResult = Await tcs.Task
 
-            ' 結果ダイアログ（設定で非表示にできる。エラー時は常に表示）
-            If _settings.ShowImportResult OrElse result.ErrorCount > 0 Then
-                Dim msg As String = String.Format(
-                    "取り込み完了{0}取り込み: {1}件 / スキップ: {2}件 / エラー: {3}件",
-                    vbCrLf, result.ImportedCount, result.SkippedCount, result.ErrorCount)
-                If result.ErrorCount > 0 Then
-                    msg &= vbCrLf & vbCrLf & "エラー詳細:" & vbCrLf & String.Join(vbCrLf, result.Errors)
-                End If
+            Dim msg As String = String.Format(
+                "取り込み完了{0}取り込み: {1}件 / スキップ: {2}件 / エラー: {3}件",
+                vbCrLf, result.ImportedCount, result.SkippedCount, result.ErrorCount)
+            If result.ErrorCount > 0 Then
+                msg &= vbCrLf & vbCrLf & "エラー詳細:" & vbCrLf & String.Join(vbCrLf, result.Errors)
+            End If
+            ' エラーがある場合は設定に関わらず表示。それ以外は ShowImportResult 設定に従う
+            If result.ErrorCount > 0 OrElse _settings.ShowImportResult Then
                 MessageBox.Show(msg, "取り込み結果", MessageBoxButtons.OK, MessageBoxIcon.Information)
             End If
 
