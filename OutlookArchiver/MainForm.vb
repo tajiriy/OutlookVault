@@ -616,11 +616,45 @@ Public Class MainForm
     End Sub
 
     Private Sub menuItemSettings_Click(sender As Object, e As EventArgs) Handles menuItemSettings.Click
+        Dim wasReset As Boolean = False
         Using frm As New SettingsForm()
             frm.ShowDialog(Me)
+            wasReset = frm.DataWasReset
         End Using
-        ' OK/キャンセルどちらでも設定を再適用（設定が変わった場合のみ影響あり）
+
+        If wasReset Then
+            ReinitializeApp()
+        Else
+            ' OK/キャンセルどちらでも設定を再適用（設定が変わった場合のみ影響あり）
+            ApplySettings()
+        End If
+    End Sub
+
+    ''' <summary>
+    ''' データ初期化後にサービスと UI を再初期化する。
+    ''' DB と添付ファイルはすでに削除済みの前提で呼び出すこと。
+    ''' </summary>
+    Private Sub ReinitializeApp()
+        ' サービス再生成（DB ファイルを新規作成してスキーマを初期化）
+        InitializeServices()
+
+        ' 自動取り込みタイマー間隔を再設定
         ApplySettings()
+
+        ' UI をリセット
+        emailPreview.ClearPreview()
+        conversationView.ClearView()
+        _emailCache = New List(Of Models.Email)()
+        _currentFolder = Nothing
+        _searchQuery = Nothing
+        txtSearch.Text = String.Empty
+
+        LoadFolderTree()
+        LoadEmails(Nothing)
+        UpdateStatusBar()
+
+        MessageBox.Show("データを初期化しました。",
+            "初期化完了", MessageBoxButtons.OK, MessageBoxIcon.Information)
     End Sub
 
     ''' <summary>設定変更をランタイムに反映する（タイマー間隔・自動取り込み開始/停止）。</summary>

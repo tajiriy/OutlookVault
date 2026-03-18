@@ -10,6 +10,9 @@ Public Class SettingsForm
 
     Private ReadOnly _settings As Config.AppSettings
 
+    ''' <summary>データ初期化が正常完了した場合 True。MainForm 側で再初期化の判断に使用する。</summary>
+    Public Property DataWasReset As Boolean = False
+
     ' ════════════════════════════════════════════════════════════
     '  初期化
     ' ════════════════════════════════════════════════════════════
@@ -142,11 +145,10 @@ Public Class SettingsForm
                 System.IO.Directory.Delete(attachDir, recursive:=True)
             End If
 
-            System.Windows.Forms.MessageBox.Show(
-                "データを初期化しました。" & vbCrLf & "アプリケーションを再起動してください。",
-                "初期化完了",
-                System.Windows.Forms.MessageBoxButtons.OK,
-                System.Windows.Forms.MessageBoxIcon.Information)
+            ' MainForm 側で再初期化を行うためフラグをセットしてダイアログを閉じる
+            DataWasReset = True
+            Me.DialogResult = System.Windows.Forms.DialogResult.OK
+            Me.Close()
         Catch ex As Exception
             System.Windows.Forms.MessageBox.Show(
                 "初期化中にエラーが発生しました:" & vbCrLf & ex.Message,
