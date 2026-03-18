@@ -325,6 +325,26 @@ ALTER TABLE attachments ADD COLUMN is_inline  INTEGER DEFAULT 0;
 
 `ExtractEmailData` での HasAttachments チェックで ContentID 取得（PropertyAccessor）を行っていたが、同じ処理が `SaveAttachments` でも行われていた。`ExtractEmailData` 側を OLE 除外のみに簡略化し COM 呼び出しを削減。
 
+### ④ PRAGMA synchronous=OFF（取り込み中のみ）
+
+- **変更前**: WAL モードのデフォルト `synchronous=NORMAL` で、コミットごとに fsync が走る
+- **変更後**: `ImportFolder` 開始時に `synchronous=OFF` に設定し fsync を省略。取り込み完了後（Finally）に `synchronous=NORMAL` に復元。OS クラッシュ時のみデータ破損リスクあり（アプリクラッシュは問題なし）
+
+### ⑤ FTS4 トリガーの一時無効化
+
+- **変更前**: INSERT ごとに FTS4 同期トリガー（emails_fts / attachments_fts）が発火し、全文検索インデックスを更新
+- **変更後**: `ImportFolder` 開始時にトリガーを DROP、取り込み完了後に FTS4 の `rebuild` コマンドで一括再構築してからトリガーを再作成。バルク INSERT 時のオーバーヘッドを大幅に削減
+
+### ⑥ Prepared Statement の再利用
+
+- **変更前**: `InsertEmail` / `InsertAttachment` が呼び出しごとに `SQLiteCommand` を new し、SQL パース・コンパイルが毎回発生
+- **変更後**: `BeginBulk()` 時に Email / Attachment 用の Prepared Statement を1回だけ作成。バルクモード中はパラメータ値の入れ替えのみで再利用。`CommitBulk()` / `RollbackBulk()` 時に Dispose
+
+### ⑦ BulkCommitInterval の増加
+
+- **変更前**: 50件ごとに中間コミット
+- **変更後**: 200件ごとに中間コミット（fsync 回数を 1/4 に削減）
+
 ---
 
 ## 技術的注意点
