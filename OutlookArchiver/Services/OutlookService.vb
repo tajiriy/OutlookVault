@@ -115,6 +115,28 @@ Namespace Services
         ' ════════════════════════════════════════════════════════════
 
         ''' <summary>
+        ''' MailItem から MessageID のみを軽量に取得する。
+        ''' MAPI PropertyAccessor → トランスポートヘッダー → EntryID の順にフォールバック。
+        ''' 本文・受信者・添付ファイルなどの重い COM 操作は行わない。
+        ''' </summary>
+        Public Function ExtractMessageId(mailItem As Outlook.MailItem) As String
+            Dim pa As Outlook.PropertyAccessor = mailItem.PropertyAccessor
+
+            Dim messageId As String = CleanMessageId(GetMAPIString(pa, PropMessageId))
+            If Not String.IsNullOrEmpty(messageId) Then Return messageId
+
+            ' MAPI で取れなかった場合はトランスポートヘッダーから補完
+            Dim transportHeaders As String = GetMAPIString(pa, PropTransportHeaders)
+            If Not String.IsNullOrEmpty(transportHeaders) Then
+                messageId = CleanMessageId(ParseHeaderField(transportHeaders, "Message-ID"))
+                If Not String.IsNullOrEmpty(messageId) Then Return messageId
+            End If
+
+            ' MessageId が取れない場合は EntryID を代替として使用
+            Return "entryid:" & mailItem.EntryID
+        End Function
+
+        ''' <summary>
         ''' MailItem から Models.Email を生成して返す。ThreadId は設定しない。
         ''' </summary>
         Public Function ExtractEmailData(mailItem As Outlook.MailItem) As Models.Email

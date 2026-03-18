@@ -221,14 +221,15 @@ Namespace Services
                                          existingIds As HashSet(Of String),
                                          deletedIds As HashSet(Of String),
                                          importResult As ImportResult) As Boolean
-            ' メールデータを抽出
-            Dim email As Models.Email = _outlookSvc.ExtractEmailData(mailItem)
-
-            ' 重複チェック（メモリ内 HashSet で高速判定）
-            If Not String.IsNullOrEmpty(email.MessageId) Then
-                If existingIds.Contains(email.MessageId) Then Return False
-                If deletedIds.Contains(email.MessageId) Then Return False
+            ' 軽量に MessageID だけ取得して重複チェック（本文・受信者等の重いCOM操作を回避）
+            Dim messageId As String = _outlookSvc.ExtractMessageId(mailItem)
+            If Not String.IsNullOrEmpty(messageId) Then
+                If existingIds.Contains(messageId) Then Return False
+                If deletedIds.Contains(messageId) Then Return False
             End If
+
+            ' 新規メールのみフルデータを抽出
+            Dim email As Models.Email = _outlookSvc.ExtractEmailData(mailItem)
 
             ' スレッド ID を付与
             _threadingSvc.AssignThreadId(email)
