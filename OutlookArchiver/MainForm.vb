@@ -335,7 +335,20 @@ Public Class MainForm
                 msg &= String.Format("{0}削除同期: {1}件", vbCrLf, result.DeletedCount)
             End If
             If result.ErrorCount > 0 Then
-                msg &= vbCrLf & vbCrLf & "エラー詳細:" & vbCrLf & String.Join(vbCrLf, result.Errors)
+                ' エラー詳細をログファイルに出力
+                Dim logPath As String = Services.ImportLogWriter.WriteErrorLog(result.Errors)
+
+                ' エラーメッセージ別の集計サマリーをダイアログに表示
+                Dim summary As List(Of KeyValuePair(Of String, Integer)) =
+                    Services.ImportLogWriter.SummarizeErrors(result.Errors)
+                msg &= vbCrLf & vbCrLf & "エラーサマリー:"
+                For Each kvp As KeyValuePair(Of String, Integer) In summary
+                    msg &= vbCrLf & "  ・" & kvp.Key & ": " & kvp.Value.ToString() & "件"
+                Next
+
+                If logPath IsNot Nothing Then
+                    msg &= vbCrLf & vbCrLf & "詳細はログファイルを参照:" & vbCrLf & logPath
+                End If
             End If
             ' エラーがある場合は設定に関わらず表示。それ以外は ShowImportResult 設定に従う
             If result.ErrorCount > 0 OrElse _settings.ShowImportResult Then

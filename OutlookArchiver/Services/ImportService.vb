@@ -19,6 +19,23 @@ Namespace Services
         Public Property CurrentSubject As String
     End Class
 
+    ''' <summary>取り込みエラー1件の詳細情報。</summary>
+    Public Class ImportErrorEntry
+        Public Property Timestamp As DateTime
+        Public Property FolderName As String
+        Public Property MessageId As String
+        Public Property Subject As String
+        Public Property ErrorMessage As String
+
+        Public Sub New(folderName As String, messageId As String, subject As String, errorMessage As String)
+            Me.Timestamp = DateTime.Now
+            Me.FolderName = folderName
+            Me.MessageId = messageId
+            Me.Subject = subject
+            Me.ErrorMessage = errorMessage
+        End Sub
+    End Class
+
     ''' <summary>取り込み結果サマリー。</summary>
     Public Class ImportResult
         Public Property ImportedCount As Integer
@@ -26,10 +43,10 @@ Namespace Services
         Public Property ErrorCount As Integer
         Public Property TotalOutlookCount As Integer
         Public Property DeletedCount As Integer
-        Public Property Errors As List(Of String)
+        Public Property Errors As List(Of ImportErrorEntry)
 
         Public Sub New()
-            Errors = New List(Of String)()
+            Errors = New List(Of ImportErrorEntry)()
         End Sub
     End Class
 
@@ -96,7 +113,7 @@ Namespace Services
 
             Dim folder As Outlook.MAPIFolder = _outlookSvc.FindFolder(folderName)
             If folder Is Nothing Then
-                result.Errors.Add("フォルダが見つかりません: " & folderName)
+                result.Errors.Add(New ImportErrorEntry(folderName, "", "", "フォルダが見つかりません: " & folderName))
                 result.ErrorCount += 1
                 Return result
             End If
@@ -150,7 +167,7 @@ Namespace Services
                     Dim subject As String = mailItem.Subject
 
                     Try
-                        Dim imported As Boolean = ProcessMailItem(mailItem, attachBaseDir, existingIds, deletedIds, result)
+                        Dim imported As Boolean = ProcessMailItem(mailItem, attachBaseDir, existingIds, deletedIds, result, folderName)
                         If imported Then
                             result.ImportedCount += 1
                             sinceLastCommit += 1
@@ -165,7 +182,12 @@ Namespace Services
                         End If
                     Catch ex As Exception
                         result.ErrorCount += 1
-                        result.Errors.Add("エラー [" & subject & "]: " & ex.Message)
+                        Dim errMsgId As String = ""
+                        Try
+                            errMsgId = _outlookSvc.ExtractMessageId(mailItem)
+                        Catch
+                        End Try
+                        result.Errors.Add(New ImportErrorEntry(folderName, errMsgId, subject, ex.Message))
                     End Try
 
                     ' 進捗通知
@@ -314,7 +336,8 @@ Namespace Services
                                          attachBaseDir As String,
                                          existingIds As HashSet(Of String),
                                          deletedIds As HashSet(Of String),
-                                         importResult As ImportResult) As Boolean
+                                         importResult As ImportResult,
+                                         folderName As String) As Boolean
             ' 軽量に MessageID だけ取得して重複チェック（本文・受信者等の重いCOM操作を回避）
             Dim messageId As String = _outlookSvc.ExtractMessageId(mailItem)
             If Not String.IsNullOrEmpty(messageId) Then
@@ -345,7 +368,7 @@ Namespace Services
                     _repo.InsertAttachment(att)
                 Next
                 For Each errMsg As String In attachSaveErrors
-                    importResult.Errors.Add(errMsg)
+                    importResult.Errors.Add(New ImportErrorEntry(folderName, email.MessageId, email.Subject, errMsg))
                     importResult.ErrorCount += 1
                 Next
 

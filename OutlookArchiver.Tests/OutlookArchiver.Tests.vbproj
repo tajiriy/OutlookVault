@@ -78,6 +78,7 @@
     <Compile Include="DatabaseManagerTests.vb" />
     <Compile Include="EmailRepositoryTests.vb" />
     <Compile Include="HtmlSanitizerServiceTests.vb" />
+    <Compile Include="ImportLogWriterTests.vb" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
 </Project>
