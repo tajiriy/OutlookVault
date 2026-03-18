@@ -89,6 +89,12 @@ CREATE TABLE IF NOT EXISTS attachments (
 CREATE TABLE IF NOT EXISTS deleted_message_ids (
     message_id TEXT PRIMARY KEY,
     deleted_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS exchange_address_cache (
+    ex_address   TEXT PRIMARY KEY,
+    smtp_address TEXT NOT NULL,
+    cached_at    TEXT DEFAULT (datetime('now', 'localtime'))
 );"
             ExecuteNonQuery(conn, sql)
         End Sub

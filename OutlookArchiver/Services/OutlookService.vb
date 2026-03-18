@@ -28,7 +28,7 @@ Namespace Services
         Private _disposed As Boolean
 
         ''' <summary>Exchange アドレス (EX) → SMTP アドレスのキャッシュ。GetExchangeUser() のネットワーク往復を削減する。</summary>
-        Private ReadOnly _exchangeSmtpCache As New Dictionary(Of String, String)()
+        Private ReadOnly _exchangeSmtpCache As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
 
         Private Sub New(app As Outlook.Application)
             _app = app
@@ -56,6 +56,24 @@ Namespace Services
             If svc IsNot Nothing Then Return svc
             Dim app As New Outlook.Application()
             Return New OutlookService(app)
+        End Function
+
+        ' ════════════════════════════════════════════════════════════
+        '  Exchange アドレスキャッシュ管理
+        ' ════════════════════════════════════════════════════════════
+
+        ''' <summary>永続化済みの Exchange アドレスキャッシュをメモリにロードする。取り込み開始前に呼ぶ。</summary>
+        Public Sub LoadExchangeCache(cache As Dictionary(Of String, String))
+            For Each kvp As KeyValuePair(Of String, String) In cache
+                If Not _exchangeSmtpCache.ContainsKey(kvp.Key) Then
+                    _exchangeSmtpCache.Add(kvp.Key, kvp.Value)
+                End If
+            Next
+        End Sub
+
+        ''' <summary>現在のメモリ上の Exchange アドレスキャッシュを返す。取り込み終了後の永続化に使用。</summary>
+        Public Function GetExchangeCache() As Dictionary(Of String, String)
+            Return _exchangeSmtpCache
         End Function
 
         ' ════════════════════════════════════════════════════════════

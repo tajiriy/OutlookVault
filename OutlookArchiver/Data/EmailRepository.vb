@@ -688,6 +688,49 @@ END;"
         End Sub
 
         ' ════════════════════════════════════════════════════════════
+        '  Exchange アドレスキャッシュ
+        ' ════════════════════════════════════════════════════════════
+
+        ''' <summary>永続化された Exchange アドレスキャッシュを全件読み込む。</summary>
+        Public Function LoadExchangeAddressCache() As Dictionary(Of String, String)
+            Const sql As String = "SELECT ex_address, smtp_address FROM exchange_address_cache"
+            Dim result As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+            Using conn As SQLiteConnection = _dbManager.GetConnection()
+                Using cmd As New SQLiteCommand(sql, conn)
+                    Using reader As SQLiteDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            Dim exAddr As String = reader.GetString(0)
+                            Dim smtpAddr As String = reader.GetString(1)
+                            If Not result.ContainsKey(exAddr) Then
+                                result.Add(exAddr, smtpAddr)
+                            End If
+                        End While
+                    End Using
+                End Using
+            End Using
+            Return result
+        End Function
+
+        ''' <summary>Exchange アドレスキャッシュの新規分を DB に書き戻す。</summary>
+        Public Sub SaveExchangeAddressCache(cache As Dictionary(Of String, String))
+            Const sql As String = "INSERT OR IGNORE INTO exchange_address_cache (ex_address, smtp_address) VALUES (@ex, @smtp)"
+            Using conn As SQLiteConnection = _dbManager.GetConnection()
+                Using tx As SQLiteTransaction = conn.BeginTransaction()
+                    Using cmd As New SQLiteCommand(sql, conn)
+                        cmd.Parameters.Add("@ex", System.Data.DbType.String)
+                        cmd.Parameters.Add("@smtp", System.Data.DbType.String)
+                        For Each kvp As KeyValuePair(Of String, String) In cache
+                            cmd.Parameters("@ex").Value = kvp.Key
+                            cmd.Parameters("@smtp").Value = kvp.Value
+                            cmd.ExecuteNonQuery()
+                        Next
+                    End Using
+                    tx.Commit()
+                End Using
+            End Using
+        End Sub
+
+        ' ════════════════════════════════════════════════════════════
         '  マッピング・ユーティリティ
         ' ════════════════════════════════════════════════════════════
 

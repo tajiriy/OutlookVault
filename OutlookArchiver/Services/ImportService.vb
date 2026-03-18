@@ -198,6 +198,9 @@ Namespace Services
             Dim existingIds As HashSet(Of String) = _repo.GetAllMessageIds()
             Dim deletedIds As HashSet(Of String) = _repo.GetAllDeletedMessageIds()
 
+            ' Exchange アドレスキャッシュを DB からロード
+            _outlookSvc.LoadExchangeCache(_repo.LoadExchangeAddressCache())
+
             For Each name As String In folderNames
                 Dim r As ImportResult = ImportFolder(name, maxCountPerFolder, existingIds, deletedIds, progress)
                 total.ImportedCount += r.ImportedCount
@@ -205,6 +208,10 @@ Namespace Services
                 total.ErrorCount += r.ErrorCount
                 total.Errors.AddRange(r.Errors)
             Next
+
+            ' Exchange アドレスキャッシュの新規分を DB に書き戻し
+            _repo.SaveExchangeAddressCache(_outlookSvc.GetExchangeCache())
+
             Return total
         End Function
 
