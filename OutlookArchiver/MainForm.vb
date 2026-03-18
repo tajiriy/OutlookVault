@@ -33,7 +33,7 @@ Public Class MainForm
     '  フォーム初期化
     ' ════════════════════════════════════════════════════════════
 
-    Private Sub MainForm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+    Private Async Sub MainForm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         ' デザイナーが SplitterDistance を上書きするため、ここで正しい比率に設定する
         ' フォルダツリー幅: 150px、メール一覧高さ: コンテンツ領域の約 40%
         splitMain.SplitterDistance = 150
@@ -46,7 +46,7 @@ Public Class MainForm
         SetupListViewContextMenu()
         SetupToggleViewButton()
         LoadFolderTree()
-        UpdateStatusBar()
+        Await UpdateStatusBarAsync()
 
         If _settings.AutoImportEnabled Then
             StartAutoImport()
@@ -170,28 +170,35 @@ Public Class MainForm
         treeViewFolders.SelectedNode = nodeAll
     End Sub
 
-    Private Sub treeViewFolders_AfterSelect(sender As Object, e As TreeViewEventArgs) Handles treeViewFolders.AfterSelect
+    Private Async Sub treeViewFolders_AfterSelect(sender As Object, e As TreeViewEventArgs) Handles treeViewFolders.AfterSelect
         If e.Node Is Nothing Then Return
         If _updatingFolderCounts Then Return
         _currentFolder = TryCast(e.Node.Tag, String)
         ' 検索ボックスと検索クエリをクリアしてフォルダ切り替え
         txtSearch.Text = String.Empty
         _searchQuery = Nothing
-        LoadEmails(_currentFolder)
+        Await LoadEmailsAsync(_currentFolder)
     End Sub
 
     ' ════════════════════════════════════════════════════════════
     '  メール一覧（VirtualMode）
     ' ════════════════════════════════════════════════════════════
 
-    ''' <summary>DBからメールを読み込んでListViewのVirtualListSizeを更新する。</summary>
-    Private Sub LoadEmails(Optional folderName As String = Nothing)
-        _emailCache = _repo.GetEmails(folderName, pageSize:=500)
+    ''' <summary>DBからメールを読み込んでListViewのVirtualListSizeを更新する（非同期）。</summary>
+    Private Async Function LoadEmailsAsync(Optional folderName As String = Nothing) As Task
+        Dim repo As Data.EmailRepository = _repo
+        Dim sortCol As Integer = _sortColumn
+        Dim sortAsc As Boolean = _sortAscending
+        Dim emails As List(Of Models.Email) = Await Task.Run(
+            Function() As List(Of Models.Email)
+                Return repo.GetEmails(folderName, pageSize:=500)
+            End Function)
+        _emailCache = emails
         SortEmailCache()
         listViewEmails.VirtualListSize = _emailCache.Count
         listViewEmails.Invalidate()
-        UpdateStatusBar()
-    End Sub
+        Await UpdateStatusBarAsync()
+    End Function
 
     ''' <summary>メール一覧で行が選択されたときにプレビューと会話ビューを更新する。</summary>
     Private Sub listViewEmails_SelectedIndexChanged(sender As Object, e As EventArgs) Handles listViewEmails.SelectedIndexChanged
@@ -337,7 +344,7 @@ Public Class MainForm
 
             ' フォルダツリーとメール一覧を更新
             LoadFolderTree()
-            LoadEmails(_currentFolder)
+            Await LoadEmailsAsync(_currentFolder)
 
         Catch ex As OperationCanceledException
             lblStatusCount.Text = "取り込みを中断しました"
@@ -355,8 +362,8 @@ Public Class MainForm
             End If
             btnImportNow.Enabled = True
             menuItemImportNow.Enabled = True
-            UpdateStatusBar()
         End Try
+        Await UpdateStatusBarAsync()
     End Function
 
     ' ════════════════════════════════════════════════════════════
@@ -414,18 +421,22 @@ Public Class MainForm
         End If
     End Sub
 
-    Private Sub RunSearch()
+    Private Async Sub RunSearch()
         Dim query As String = txtSearch.Text.Trim()
         _searchQuery = If(String.IsNullOrEmpty(query), Nothing, query)
 
         If String.IsNullOrEmpty(query) Then
             ' クエリ空 → 現在のフォルダを再表示
-            LoadEmails(_currentFolder)
+            Await LoadEmailsAsync(_currentFolder)
             Return
         End If
 
         Try
-            _emailCache = _repo.SearchEmailsFiltered(query)
+            Dim repo As Data.EmailRepository = _repo
+            _emailCache = Await Task.Run(
+                Function() As List(Of Models.Email)
+                    Return repo.SearchEmailsFiltered(query)
+                End Function)
             SortEmailCache()
             listViewEmails.VirtualListSize = _emailCache.Count
             listViewEmails.Invalidate()
@@ -444,7 +455,7 @@ Public Class MainForm
     ' ════════════════════════════════════════════════════════════
 
     ''' <summary>メール一覧で選択中のメールを削除する（添付ファイル実体も削除）。</summary>
-    Private Sub DeleteSelectedEmails()
+    Private Async Sub DeleteSelectedEmails()
         If listViewEmails.SelectedIndices.Count = 0 Then Return
 
         Dim selectedIds As New List(Of Integer)()
@@ -491,8 +502,7 @@ Public Class MainForm
             _repo.DeleteEmail(emailId)
         Next
 
-        LoadEmails(_currentFolder)
-        UpdateStatusBar()
+        Await LoadEmailsAsync(_currentFolder)
     End Sub
 
     ''' <summary>コンテキストメニュー「削除」クリック。</summary>
@@ -549,73 +559,109 @@ Public Class MainForm
     ' ════════════════════════════════════════════════════════════
 
     ''' <summary>フォルダツリーの件数表示を更新する。選択中のフォルダは維持する。</summary>
-    Private Sub UpdateFolderCounts()
+    Private Async Function UpdateFolderCountsAsync() As Task
+        Dim repo As Data.EmailRepository = _repo
+
+        ' DBクエリをバックグラウンドスレッドで実行
+        Dim folderData As List(Of Tuple(Of String, Integer)) = Await Task.Run(
+            Function() As List(Of Tuple(Of String, Integer))
+                Dim result As New List(Of Tuple(Of String, Integer))()
+                Try
+                    Dim totalCount As Integer = repo.GetTotalCount()
+                    result.Add(Tuple.Create(CType(Nothing, String), totalCount))
+
+                    Dim folders As List(Of String) = repo.GetFolderNames()
+                    For Each folder As String In folders
+                        Dim count As Integer = repo.GetTotalCount(folder)
+                        result.Add(Tuple.Create(folder, count))
+                    Next
+                Catch
+                End Try
+                Return result
+            End Function)
+
+        ' UIスレッドでツリーを更新
+        If folderData.Count = 0 Then Return
+
         _updatingFolderCounts = True
         Dim selectedTag As String = _currentFolder
         treeViewFolders.BeginUpdate()
         treeViewFolders.Nodes.Clear()
 
-        Try
-            Dim totalCount As Integer = _repo.GetTotalCount()
-            Dim nodeAll As New TreeNode(String.Format("すべて ({0:N0})", totalCount))
-            nodeAll.Tag = Nothing
-            treeViewFolders.Nodes.Add(nodeAll)
+        For Each item As Tuple(Of String, Integer) In folderData
+            Dim displayName As String
+            If item.Item1 Is Nothing Then
+                displayName = String.Format("すべて ({0:N0})", item.Item2)
+            Else
+                displayName = String.Format("{0} ({1:N0})", item.Item1, item.Item2)
+            End If
+            Dim node As New TreeNode(displayName)
+            node.Tag = item.Item1
+            treeViewFolders.Nodes.Add(node)
+        Next
 
-            Dim folders As List(Of String) = _repo.GetFolderNames()
-            For Each folder As String In folders
-                Dim count As Integer = _repo.GetTotalCount(folder)
-                Dim node As New TreeNode(String.Format("{0} ({1:N0})", folder, count))
-                node.Tag = folder
-                treeViewFolders.Nodes.Add(node)
+        ' 選択状態を復元
+        Dim found As Boolean = False
+        If selectedTag IsNot Nothing Then
+            For Each node As TreeNode In treeViewFolders.Nodes
+                If CStr(node.Tag) = selectedTag Then
+                    treeViewFolders.SelectedNode = node
+                    found = True
+                    Exit For
+                End If
             Next
+        End If
+        If Not found Then
+            treeViewFolders.SelectedNode = treeViewFolders.Nodes(0)
+        End If
 
-            ' 選択状態を復元
-            Dim found As Boolean = False
-            If selectedTag IsNot Nothing Then
-                For Each node As TreeNode In treeViewFolders.Nodes
-                    If CStr(node.Tag) = selectedTag Then
-                        treeViewFolders.SelectedNode = node
-                        found = True
-                        Exit For
-                    End If
-                Next
-            End If
-            If Not found Then
-                treeViewFolders.SelectedNode = treeViewFolders.Nodes(0)
-            End If
-        Catch
-        End Try
         treeViewFolders.EndUpdate()
         _updatingFolderCounts = False
-    End Sub
+    End Function
 
     ' ════════════════════════════════════════════════════════════
     '  ステータスバー
     ' ════════════════════════════════════════════════════════════
 
-    Private Sub UpdateStatusBar()
-        Try
-            Dim count As Integer = _repo.GetTotalCount()
-            If _lastOutlookTotalCount > 0 AndAlso count < _lastOutlookTotalCount Then
-                lblStatusCount.Text = String.Format("総数 {0:N0}/{1:N0}件", count, _lastOutlookTotalCount)
+    Private Async Function UpdateStatusBarAsync() As Task
+        Dim repo As Data.EmailRepository = _repo
+        Dim lastOutlookTotal As Integer = _lastOutlookTotalCount
+
+        ' DBクエリをバックグラウンドスレッドで実行
+        Dim result As Tuple(Of Integer, DateTime?) = Await Task.Run(
+            Function() As Tuple(Of Integer, DateTime?)
+                Dim count As Integer = 0
+                Dim lastImport As DateTime? = Nothing
+                Try
+                    count = repo.GetTotalCount()
+                Catch
+                End Try
+                Try
+                    lastImport = repo.GetLastImportDate()
+                Catch
+                End Try
+                Return Tuple.Create(count, lastImport)
+            End Function)
+
+        ' UIスレッドで表示を更新
+        If result.Item1 > 0 OrElse lastOutlookTotal <= 0 Then
+            If lastOutlookTotal > 0 AndAlso result.Item1 < lastOutlookTotal Then
+                lblStatusCount.Text = String.Format("総数 {0:N0}/{1:N0}件", result.Item1, lastOutlookTotal)
             Else
-                lblStatusCount.Text = String.Format("総数 {0:N0}件", count)
+                lblStatusCount.Text = String.Format("総数 {0:N0}件", result.Item1)
             End If
-        Catch
+        Else
             lblStatusCount.Text = "総数 -件"
-        End Try
-        Try
-            Dim lastImport As DateTime? = _repo.GetLastImportDate()
-            If lastImport.HasValue Then
-                lblStatusLastImport.Text = "最終取り込み: " & lastImport.Value.ToString("yyyy/MM/dd HH:mm")
-            Else
-                lblStatusLastImport.Text = "最終取り込み: -"
-            End If
-        Catch
+        End If
+
+        If result.Item2.HasValue Then
+            lblStatusLastImport.Text = "最終取り込み: " & result.Item2.Value.ToString("yyyy/MM/dd HH:mm")
+        Else
             lblStatusLastImport.Text = "最終取り込み: -"
-        End Try
-        UpdateFolderCounts()
-    End Sub
+        End If
+
+        Await UpdateFolderCountsAsync()
+    End Function
 
     ' ════════════════════════════════════════════════════════════
     '  メール一覧 ソート・列設定
@@ -804,7 +850,7 @@ Public Class MainForm
     ''' データ初期化後にサービスと UI を再初期化する。
     ''' DB と添付ファイルはすでに削除済みの前提で呼び出すこと。
     ''' </summary>
-    Private Sub ReinitializeApp()
+    Private Async Sub ReinitializeApp()
         ' サービス再生成（DB ファイルを新規作成してスキーマを初期化）
         InitializeServices()
 
@@ -820,8 +866,7 @@ Public Class MainForm
         txtSearch.Text = String.Empty
 
         LoadFolderTree()
-        LoadEmails(Nothing)
-        UpdateStatusBar()
+        Await LoadEmailsAsync(Nothing)
 
         MessageBox.Show("データを初期化しました。",
             "初期化完了", MessageBoxButtons.OK, MessageBoxIcon.Information)
