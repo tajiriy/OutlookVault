@@ -235,6 +235,11 @@ ImportService.ImportFolder(folderName)
 - **変更後**: `ImportFolders` 開始時に `GetAllMessageIds()` / `GetAllDeletedMessageIds()` で全IDを `HashSet(Of String)` に一括ロード。以降はメモリ内 `Contains()` で判定
 - 新規取り込み分は即座にキャッシュに追加し、同一セッション内の重複も防止
 
+### 設定画面の追加機能
+
+- **データ初期化**: 設定画面に「データ管理」グループを追加。「データ初期化...」ボタンで DB ファイルと添付ファイルディレクトリを一括削除（確認ダイアログ付き）
+- **結果ダイアログ非表示**: `AppSettings` に `ShowImportResult` プロパティ追加（デフォルト: `True`）。表示設定グループに「取り込み完了時に結果ダイアログを表示する」チェックボックスを追加。OFF でも エラー発生時は常に表示
+
 ---
 
 ## 技術的注意点
