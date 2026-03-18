@@ -131,9 +131,9 @@ Namespace Controls
             Me.tlpHeader.Controls.Add(Me.lblToCaption, 0, 3)
             Me.tlpHeader.Controls.Add(Me.lblToValue, 1, 3)
 
-            ' ── pnlAttachments (Dock=Right, 100px) ────────────────────
+            ' ── pnlAttachments (Dock=Right, 120px) ────────────────────
             Me.pnlAttachments.Dock = System.Windows.Forms.DockStyle.Right
-            Me.pnlAttachments.Width = 100
+            Me.pnlAttachments.Width = 120
             Me.pnlAttachments.Name = "pnlAttachments"
             Me.pnlAttachments.Padding = New System.Windows.Forms.Padding(4)
             Me.pnlAttachments.Visible = False
