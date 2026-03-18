@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## プロジェクト概要
 
-OutlookArchiver は .NET Framework 4.6.2 / VB.NET の Windows Forms デスクトップアプリケーション。Outlook のメールアーカイブ操作を提供する。
+OutlookArchiver は .NET Framework 4.6.2 / VB.NET の Windows Forms デスクトップアプリケーション。Outlook のメール保管操作を提供する。
 
 ## ビルド・実行コマンド
 
