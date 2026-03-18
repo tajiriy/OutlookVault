@@ -20,6 +20,8 @@ Namespace Forms
 
         Private ReadOnly _dbManager As Data.DatabaseManager
 
+        Private Const FilterDelayMs As Integer = 800
+
         Private WithEvents dgv As DataGridView
         Private WithEvents cboTable As ComboBox
         Private txtFilter As TextBox
@@ -28,6 +30,7 @@ Namespace Forms
         Private pnlTop As Panel
         Private _dataTable As DataTable
         Private _bindingSource As BindingSource
+        Private _filterTimer As Timer
 
         Public Sub New(dbManager As Data.DatabaseManager, tableName As String)
             _dbManager = dbManager
@@ -69,6 +72,11 @@ Namespace Forms
             txtFilter.Location = New Drawing.Point(312, 7)
             txtFilter.Width = 300
             AddHandler txtFilter.TextChanged, AddressOf TxtFilter_TextChanged
+
+            ' フィルタ遅延用タイマー（キー入力のたびにリセット）
+            _filterTimer = New Timer()
+            _filterTimer.Interval = FilterDelayMs
+            AddHandler _filterTimer.Tick, AddressOf FilterTimer_Tick
 
             lblRowCount = New Label()
             lblRowCount.AutoSize = True
@@ -149,6 +157,13 @@ Namespace Forms
         End Sub
 
         Private Sub TxtFilter_TextChanged(sender As Object, e As EventArgs)
+            ' キー入力のたびにタイマーをリセットして再スタート
+            _filterTimer.Stop()
+            _filterTimer.Start()
+        End Sub
+
+        Private Sub FilterTimer_Tick(sender As Object, e As EventArgs)
+            _filterTimer.Stop()
             ApplyFilter()
         End Sub
 
@@ -196,6 +211,7 @@ Namespace Forms
 
         Protected Overrides Sub Dispose(disposing As Boolean)
             If disposing Then
+                If _filterTimer IsNot Nothing Then _filterTimer.Dispose()
                 If _bindingSource IsNot Nothing Then _bindingSource.Dispose()
                 If _dataTable IsNot Nothing Then _dataTable.Dispose()
             End If

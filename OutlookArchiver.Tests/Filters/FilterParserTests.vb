@@ -95,6 +95,20 @@ Public Class FilterParserTests
         Assert.That(result, [Is].EqualTo("CONVERT([id], 'System.String') = '1'"))
     End Sub
 
+    <Test>
+    Public Sub Parse_ColumnEquals_WithSpaces_ExactMatch()
+        ' "id = 1" のように演算子の前後に空白がある場合
+        Dim result As String = FilterParser.Parse("id = 1", _table.Columns)
+        Assert.That(result, [Is].EqualTo("CONVERT([id], 'System.String') = '1'"))
+    End Sub
+
+    <Test>
+    Public Sub Parse_ColumnColon_WithSpaceBefore_PartialMatch()
+        ' "subject : amazon" のように演算子の前に空白がある場合
+        Dim result As String = FilterParser.Parse("subject : amazon", _table.Columns)
+        Assert.That(result, [Is].EqualTo("[subject] LIKE '%amazon%'"))
+    End Sub
+
 #End Region
 
 #Region "AND 結合"

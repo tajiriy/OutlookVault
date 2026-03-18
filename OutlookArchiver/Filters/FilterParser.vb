@@ -77,21 +77,22 @@ Namespace Filters
                     Continue While
                 End If
 
+                ' 列名: 値 または 列名= 値 のパターンを試行（キーワードより先にチェック）
+                ' "subject : amazon" のように列名の後に空白がある場合も認識するため
+                Dim colToken As Token = Nothing
+                Dim consumed As Integer = 0
+                If TryMatchColumnOperator(input, i, colToken, consumed) Then
+                    tokens.Add(colToken)
+                    i += consumed
+                    Continue While
+                End If
+
                 ' "and" / "or" キーワードのチェック（前後が区切り位置であること）
                 Dim keyword As TokenType
                 Dim keywordLen As Integer = 0
                 If TryMatchKeyword(input, i, keyword, keywordLen) Then
                     tokens.Add(New Token() With {.Type = keyword, .Text = ""})
                     i += keywordLen
-                    Continue While
-                End If
-
-                ' 列名: 値 または 列名= 値 のパターンを試行
-                Dim colToken As Token = Nothing
-                Dim consumed As Integer = 0
-                If TryMatchColumnOperator(input, i, colToken, consumed) Then
-                    tokens.Add(colToken)
-                    i += consumed
                     Continue While
                 End If
 
@@ -169,12 +170,19 @@ Namespace Filters
             ' 列名が空ならマッチしない
             If i = nameStart Then Return False
 
+            Dim nameEnd As Integer = i
+
+            ' 列名と演算子の間の空白をスキップ（"id = 1" 対応）
+            While i < length AndAlso Char.IsWhiteSpace(input(i))
+                i += 1
+            End While
+
             ' 演算子チェック（: または =）
             If i >= length Then Return False
             Dim op As Char = input(i)
             If op <> ":"c AndAlso op <> "="c Then Return False
 
-            Dim colName As String = input.Substring(nameStart, i - nameStart)
+            Dim colName As String = input.Substring(nameStart, nameEnd - nameStart)
             Dim isExact As Boolean = (op = "="c)
 
             ' 演算子の直後の空白をスキップ
