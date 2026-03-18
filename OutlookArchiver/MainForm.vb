@@ -197,7 +197,7 @@ Public Class MainForm
         Dim repo As Data.EmailRepository = _repo
         Dim emails As List(Of Models.Email) = Await Task.Run(
             Function() As List(Of Models.Email)
-                Return repo.GetEmails(folderName)
+                Return repo.GetEmailsForList(folderName)
             End Function)
 
         ' 待機中に別のロードが開始された場合は結果を破棄する

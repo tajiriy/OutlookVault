@@ -239,6 +239,31 @@ SELECT last_insert_rowid();"
         '  Email 取得
         ' ════════════════════════════════════════════════════════════
 
+        ''' <summary>一覧表示用に軽量なカラムのみ取得する（本文を除外）。</summary>
+        Public Function GetEmailsForList(Optional folderName As String = Nothing) As List(Of Models.Email)
+            Dim sb As New StringBuilder(
+                "SELECT id, subject, sender_name, sender_email, received_at, has_attachments, email_size, thread_id FROM emails")
+            If Not String.IsNullOrEmpty(folderName) Then
+                sb.Append(" WHERE folder_name = @folder_name")
+            End If
+            sb.Append(" ORDER BY received_at DESC")
+
+            Dim result As New List(Of Models.Email)
+            Using conn As SQLiteConnection = _dbManager.GetConnection()
+                Using cmd As New SQLiteCommand(sb.ToString(), conn)
+                    If Not String.IsNullOrEmpty(folderName) Then
+                        cmd.Parameters.AddWithValue("@folder_name", folderName)
+                    End If
+                    Using reader As SQLiteDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            result.Add(MapEmailSummary(reader))
+                        End While
+                    End Using
+                End Using
+            End Using
+            Return result
+        End Function
+
         ''' <summary>フォルダ指定でメール一覧を取得する（受信日時降順）。</summary>
         ''' <param name="folderName">フォルダ名。Nothing の場合はすべて。</param>
         ''' <param name="pageIndex">ページ番号（0始まり）。pageSize &lt;= 0 の場合は無視。</param>
@@ -427,12 +452,15 @@ SELECT last_insert_rowid();"
             Dim filter As New Filters.EmailSearchFilter()
             Dim sq As Filters.EmailSearchFilter.SearchQuery = filter.Parse(query, folderName)
 
-            Dim sb As New StringBuilder("SELECT DISTINCT e.* FROM emails e")
+            ' サブクエリで ID を絞り、外側では一覧表示用の軽量カラムのみ取得
+            Dim sb As New StringBuilder(
+                "SELECT e2.id, e2.subject, e2.sender_name, e2.sender_email, e2.received_at, e2.has_attachments, e2.email_size, e2.thread_id" &
+                " FROM emails e2 INNER JOIN (SELECT DISTINCT e.id FROM emails e")
             If Not String.IsNullOrEmpty(sq.WhereClause) Then
                 sb.Append(" WHERE ")
                 sb.Append(sq.WhereClause)
             End If
-            sb.Append(" ORDER BY e.received_at DESC")
+            sb.Append(") matched ON e2.id = matched.id ORDER BY e2.received_at DESC")
 
             Dim result As New List(Of Models.Email)()
             Using conn As SQLiteConnection = _dbManager.GetConnection()
@@ -442,7 +470,7 @@ SELECT last_insert_rowid();"
                     Next
                     Using reader As SQLiteDataReader = cmd.ExecuteReader()
                         While reader.Read()
-                            result.Add(MapEmail(reader))
+                            result.Add(MapEmailSummary(reader))
                         End While
                     End Using
                 End Using
@@ -698,6 +726,21 @@ SELECT last_insert_rowid();"
         ' ════════════════════════════════════════════════════════════
         '  マッピング・ユーティリティ
         ' ════════════════════════════════════════════════════════════
+
+        ''' <summary>一覧表示用の軽量マッピング（本文系カラムなし）。</summary>
+        Private Function MapEmailSummary(reader As SQLiteDataReader) As Models.Email
+            Dim email As New Models.Email()
+            email.Id = reader.GetInt32(reader.GetOrdinal("id"))
+            email.Subject = GetStr(reader, "subject")
+            email.SenderName = GetStr(reader, "sender_name")
+            email.SenderEmail = GetStr(reader, "sender_email")
+            email.ReceivedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("received_at")))
+            email.HasAttachments = reader.GetInt32(reader.GetOrdinal("has_attachments")) = 1
+            Dim sizeOrd As Integer = reader.GetOrdinal("email_size")
+            If Not reader.IsDBNull(sizeOrd) Then email.EmailSize = reader.GetInt64(sizeOrd)
+            email.ThreadId = GetStr(reader, "thread_id")
+            Return email
+        End Function
 
         Private Function MapEmail(reader As SQLiteDataReader) As Models.Email
             Dim email As New Models.Email()
