@@ -90,7 +90,7 @@ Namespace Forms
             pnlTop.Controls.Add(lblRowCount)
 
             ' ── DataGridView ──
-            dgv = New DataGridView()
+            dgv = New BufferedDataGridView()
             dgv.Dock = DockStyle.Fill
             dgv.ReadOnly = True
             dgv.AllowUserToAddRows = False
@@ -100,8 +100,6 @@ Namespace Forms
             dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
             dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect
             dgv.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithAutoHeaderText
-            ' ちらつき防止: DoubleBuffered を有効化
-            EnableDoubleBuffering(dgv)
 
             _bindingSource = New BindingSource()
             dgv.DataSource = _bindingSource
@@ -110,15 +108,29 @@ Namespace Forms
             Me.Controls.Add(pnlTop)
         End Sub
 
-        ''' <summary>DataGridView の DoubleBuffered プロパティをリフレクションで有効化する。</summary>
-        Private Shared Sub EnableDoubleBuffering(control As Control)
-            Dim prop As System.Reflection.PropertyInfo = GetType(Control).GetProperty(
-                "DoubleBuffered",
-                System.Reflection.BindingFlags.Instance Or System.Reflection.BindingFlags.NonPublic)
-            If prop IsNot Nothing Then
-                prop.SetValue(control, True, Nothing)
-            End If
-        End Sub
+        ''' <summary>
+        ''' スクロール・リサイズ時のゴースト表示を防止する DataGridView サブクラス。
+        ''' DoubleBuffered を有効化し、スクロール/リサイズ時に全面再描画を強制する。
+        ''' </summary>
+        Private Class BufferedDataGridView
+            Inherits DataGridView
+
+            Public Sub New()
+                Me.DoubleBuffered = True
+                SetStyle(ControlStyles.OptimizedDoubleBuffer Or ControlStyles.AllPaintingInWmPaint, True)
+            End Sub
+
+            Protected Overrides Sub OnScroll(e As ScrollEventArgs)
+                MyBase.OnScroll(e)
+                Me.Invalidate()
+            End Sub
+
+            Protected Overrides Sub OnResize(e As EventArgs)
+                MyBase.OnResize(e)
+                Me.Invalidate()
+            End Sub
+
+        End Class
 
         Private Sub cboTable_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cboTable.SelectedIndexChanged
             If cboTable.SelectedItem Is Nothing Then Return
