@@ -202,15 +202,19 @@ Namespace Services
             ' ContentID の取得は SaveAttachments で行うため、ここでは OLE のみ除外する。
             ' インライン画像を含む場合も HasAttachments = True になるが、
             ' 添付パネルには IsInline=False のもののみ表示されるため実害はない。
-            Dim realAttachCount As Integer = 0
             Dim mailAtts As Outlook.Attachments = mailItem.Attachments
-            For attIdx As Integer = 1 To mailAtts.Count
-                Dim a As Outlook.Attachment = CType(mailAtts.Item(attIdx), Outlook.Attachment)
-                If a.Type <> Outlook.OlAttachmentType.olOLE Then
-                    realAttachCount += 1
-                End If
-            Next
-            email.HasAttachments = realAttachCount > 0
+            If mailAtts.Count = 0 Then
+                email.HasAttachments = False
+            Else
+                Dim realAttachCount As Integer = 0
+                For attIdx As Integer = 1 To mailAtts.Count
+                    Dim a As Outlook.Attachment = CType(mailAtts.Item(attIdx), Outlook.Attachment)
+                    If a.Type <> Outlook.OlAttachmentType.olOLE Then
+                        realAttachCount += 1
+                    End If
+                Next
+                email.HasAttachments = realAttachCount > 0
+            End If
 
             ' ── サイズ ──────────────────────────────────────────
             email.EmailSize = mailItem.Size
@@ -377,8 +381,8 @@ Namespace Services
         End Function
 
         ''' <summary>指定タイプの受信者を JSON 配列文字列にシリアライズする。</summary>
-        Private Shared Function SerializeRecipients(recipients As Outlook.Recipients,
-                                                    recipType As Outlook.OlMailRecipientType) As String
+        Private Function SerializeRecipients(recipients As Outlook.Recipients,
+                                              recipType As Outlook.OlMailRecipientType) As String
             Dim expectedType As Integer = CType(recipType, Integer)
             Dim parts As New List(Of String)()
 
@@ -387,13 +391,10 @@ Namespace Services
                 If r.Type <> expectedType Then Continue For
 
                 Dim emailAddr As String = r.Address
-                ' Exchange アドレスの場合は SMTP アドレスを解決
+                ' Exchange アドレスの場合は SMTP アドレスを解決（キャッシュ付き）
                 If r.AddressEntry IsNot Nothing AndAlso r.AddressEntry.Type = "EX" Then
-                    Try
-                        Dim exUser As Outlook.ExchangeUser = r.AddressEntry.GetExchangeUser()
-                        If exUser IsNot Nothing Then emailAddr = exUser.PrimarySmtpAddress
-                    Catch
-                    End Try
+                    Dim entry As Outlook.AddressEntry = r.AddressEntry
+                    emailAddr = ResolveExchangeAddress(r.Address, Function() entry)
                 End If
 
                 parts.Add("{""name"":" & JsonStr(r.Name) & ",""email"":" & JsonStr(emailAddr) & "}")
