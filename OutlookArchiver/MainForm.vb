@@ -520,6 +520,9 @@ Public Class MainForm
         If Not _settings.ShowBalloonOnImport Then Return
         If Not notifyIcon.Visible Then Return
 
+        ' 取り込み0件・削除同期0件・エラー0件の場合は通知不要
+        If result.ImportedCount = 0 AndAlso result.DeletedCount = 0 AndAlso result.ErrorCount = 0 Then Return
+
         Dim msg As String = String.Format("取り込み: {0}件 / スキップ: {1}件",
             result.ImportedCount, result.SkippedCount)
         If result.ErrorCount > 0 Then
