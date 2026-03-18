@@ -570,6 +570,38 @@ END;"
             Return result
         End Function
 
+        ''' <summary>
+        ''' EmailSearchFilter を使用してメールを検索する。
+        ''' 列指定・AND/OR・添付有無などの高度なフィルタ構文に対応。
+        ''' </summary>
+        Public Function SearchEmailsFiltered(query As String,
+                                             Optional folderName As String = Nothing) As List(Of Models.Email)
+            Dim filter As New Filters.EmailSearchFilter()
+            Dim sq As Filters.EmailSearchFilter.SearchQuery = filter.Parse(query, folderName)
+
+            Dim sb As New StringBuilder("SELECT DISTINCT e.* FROM emails e")
+            If Not String.IsNullOrEmpty(sq.WhereClause) Then
+                sb.Append(" WHERE ")
+                sb.Append(sq.WhereClause)
+            End If
+            sb.Append(" ORDER BY e.received_at DESC")
+
+            Dim result As New List(Of Models.Email)()
+            Using conn As SQLiteConnection = _dbManager.GetConnection()
+                Using cmd As New SQLiteCommand(sb.ToString(), conn)
+                    For Each p As SQLiteParameter In sq.Parameters
+                        cmd.Parameters.Add(p)
+                    Next
+                    Using reader As SQLiteDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            result.Add(MapEmail(reader))
+                        End While
+                    End Using
+                End Using
+            End Using
+            Return result
+        End Function
+
         ''' <summary>文字列に非 ASCII 文字（日本語等）が含まれるか確認する。</summary>
         Private Function ContainsNonAscii(s As String) As Boolean
             For Each c As Char In s

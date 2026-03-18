@@ -387,7 +387,7 @@ Public Class MainForm
         End If
 
         Try
-            _emailCache = _repo.SearchEmails(query)
+            _emailCache = _repo.SearchEmailsFiltered(query)
             SortEmailCache()
             listViewEmails.VirtualListSize = _emailCache.Count
             listViewEmails.Invalidate()
