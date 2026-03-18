@@ -204,7 +204,7 @@ END;"
 
         ' ── テーブルデータ取得 ────────────────────────────────────
 
-        ''' <summary>指定テーブルの全行を DataTable で返す。</summary>
+        ''' <summary>指定テーブルの全行を DataTable で返す。長文列は先頭100文字に切り詰める。</summary>
         Public Function GetTableData(tableName As String) As System.Data.DataTable
             ' テーブル名をホワイトリストで検証（SQLインジェクション防止）
             Dim allowed() As String = {"emails", "attachments", "deleted_message_ids", "exchange_address_cache"}
@@ -212,15 +212,37 @@ END;"
                 Throw New ArgumentException("無効なテーブル名: " & tableName)
             End If
 
+            Dim sql As String = BuildTableDataQuery(tableName)
+
             Dim dt As New System.Data.DataTable()
             Using conn As SQLiteConnection = GetConnection()
-                Using cmd As New SQLiteCommand("SELECT * FROM " & tableName, conn)
+                Using cmd As New SQLiteCommand(sql, conn)
                     Using reader As SQLiteDataReader = cmd.ExecuteReader()
                         dt.Load(reader)
                     End Using
                 End Using
             End Using
             Return dt
+        End Function
+
+        ''' <summary>テーブルビューア用の SELECT 文を生成する。長文列は SUBSTR で切り詰める。</summary>
+        Private Shared Function BuildTableDataQuery(tableName As String) As String
+            If tableName <> "emails" Then
+                Return "SELECT * FROM " & tableName
+            End If
+
+            ' emails テーブル: 長文列を先頭100文字に切り詰め
+            Const TruncLen As Integer = 100
+            Return String.Format(
+                "SELECT id, message_id, in_reply_to, [references], thread_id, entry_id, " &
+                "subject, normalized_subject, sender_name, sender_email, " &
+                "SUBSTR(to_recipients, 1, {0}) AS to_recipients, " &
+                "SUBSTR(cc_recipients, 1, {0}) AS cc_recipients, " &
+                "SUBSTR(bcc_recipients, 1, {0}) AS bcc_recipients, " &
+                "SUBSTR(body_text, 1, {0}) AS body_text, " &
+                "SUBSTR(body_html, 1, {0}) AS body_html, " &
+                "received_at, sent_at, folder_name, has_attachments, email_size, " &
+                "created_at, updated_at FROM emails", TruncLen)
         End Function
 
         ' ── ユーティリティ ────────────────────────────────────────

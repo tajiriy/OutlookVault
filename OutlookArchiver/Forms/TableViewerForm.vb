@@ -120,11 +120,6 @@ Namespace Forms
                 SetStyle(ControlStyles.OptimizedDoubleBuffer Or ControlStyles.AllPaintingInWmPaint, True)
             End Sub
 
-            Protected Overrides Sub OnScroll(e As ScrollEventArgs)
-                MyBase.OnScroll(e)
-                Me.Invalidate()
-            End Sub
-
             Protected Overrides Sub OnResize(e As EventArgs)
                 MyBase.OnResize(e)
                 Me.Invalidate()
