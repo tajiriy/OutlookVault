@@ -29,8 +29,10 @@ Partial Class SettingsForm
         Me.btnBrowseAttach = New System.Windows.Forms.Button()
         Me.grpAutoImport = New System.Windows.Forms.GroupBox()
         Me.chkAutoImportEnabled = New System.Windows.Forms.CheckBox()
-        Me.lblInterval = New System.Windows.Forms.Label()
+        Me.rdoInterval = New System.Windows.Forms.RadioButton()
+        Me.rdoScheduled = New System.Windows.Forms.RadioButton()
         Me.numInterval = New System.Windows.Forms.NumericUpDown()
+        Me.dtpScheduledTime = New System.Windows.Forms.DateTimePicker()
         Me.lblMaxCount = New System.Windows.Forms.Label()
         Me.numMaxCount = New System.Windows.Forms.NumericUpDown()
         Me.lblImportOrder = New System.Windows.Forms.Label()
@@ -128,8 +130,10 @@ Partial Class SettingsForm
         '
         Me.chkSyncDeletions = New System.Windows.Forms.CheckBox()
         Me.grpAutoImport.Controls.Add(Me.chkAutoImportEnabled)
-        Me.grpAutoImport.Controls.Add(Me.lblInterval)
+        Me.grpAutoImport.Controls.Add(Me.rdoInterval)
         Me.grpAutoImport.Controls.Add(Me.numInterval)
+        Me.grpAutoImport.Controls.Add(Me.rdoScheduled)
+        Me.grpAutoImport.Controls.Add(Me.dtpScheduledTime)
         Me.grpAutoImport.Controls.Add(Me.lblMaxCount)
         Me.grpAutoImport.Controls.Add(Me.numMaxCount)
         Me.grpAutoImport.Controls.Add(Me.lblImportOrder)
@@ -137,7 +141,7 @@ Partial Class SettingsForm
         Me.grpAutoImport.Controls.Add(Me.chkSyncDeletions)
         Me.grpAutoImport.Location = New System.Drawing.Point(8, 110)
         Me.grpAutoImport.Name = "grpAutoImport"
-        Me.grpAutoImport.Size = New System.Drawing.Size(488, 158)
+        Me.grpAutoImport.Size = New System.Drawing.Size(488, 184)
         Me.grpAutoImport.TabIndex = 1
         Me.grpAutoImport.TabStop = False
         Me.grpAutoImport.Text = "自動取り込み"
@@ -151,23 +155,46 @@ Partial Class SettingsForm
         Me.chkAutoImportEnabled.TabIndex = 0
         Me.chkAutoImportEnabled.Text = "起動時に自動取り込みを開始する"
         '
-        'lblInterval
+        'rdoInterval
         '
-        Me.lblInterval.AutoSize = True
-        Me.lblInterval.Location = New System.Drawing.Point(8, 50)
-        Me.lblInterval.Name = "lblInterval"
-        Me.lblInterval.Size = New System.Drawing.Size(130, 13)
-        Me.lblInterval.Text = "取り込み間隔（分）:"
+        Me.rdoInterval.AutoSize = True
+        Me.rdoInterval.Checked = True
+        Me.rdoInterval.Location = New System.Drawing.Point(24, 48)
+        Me.rdoInterval.Name = "rdoInterval"
+        Me.rdoInterval.Size = New System.Drawing.Size(130, 17)
+        Me.rdoInterval.TabIndex = 1
+        Me.rdoInterval.TabStop = True
+        Me.rdoInterval.Text = "取り込み間隔（分）:"
         '
         'numInterval
         '
-        Me.numInterval.Location = New System.Drawing.Point(160, 47)
+        Me.numInterval.Location = New System.Drawing.Point(180, 47)
         Me.numInterval.Maximum = New Decimal(New Integer() {1440, 0, 0, 0})
         Me.numInterval.Minimum = New Decimal(New Integer() {1, 0, 0, 0})
         Me.numInterval.Name = "numInterval"
         Me.numInterval.Size = New System.Drawing.Size(60, 22)
-        Me.numInterval.TabIndex = 1
+        Me.numInterval.TabIndex = 2
         Me.numInterval.Value = New Decimal(New Integer() {10, 0, 0, 0})
+        '
+        'rdoScheduled
+        '
+        Me.rdoScheduled.AutoSize = True
+        Me.rdoScheduled.Location = New System.Drawing.Point(260, 48)
+        Me.rdoScheduled.Name = "rdoScheduled"
+        Me.rdoScheduled.Size = New System.Drawing.Size(93, 17)
+        Me.rdoScheduled.TabIndex = 3
+        Me.rdoScheduled.Text = "定時取り込み:"
+        '
+        'dtpScheduledTime
+        '
+        Me.dtpScheduledTime.CustomFormat = "HH:mm"
+        Me.dtpScheduledTime.Format = System.Windows.Forms.DateTimePickerFormat.Custom
+        Me.dtpScheduledTime.Location = New System.Drawing.Point(380, 46)
+        Me.dtpScheduledTime.Name = "dtpScheduledTime"
+        Me.dtpScheduledTime.ShowUpDown = True
+        Me.dtpScheduledTime.Size = New System.Drawing.Size(60, 22)
+        Me.dtpScheduledTime.TabIndex = 4
+        Me.dtpScheduledTime.Value = New System.DateTime(2026, 1, 1, 20, 0, 0, 0)
         '
         'lblMaxCount
         '
@@ -179,12 +206,12 @@ Partial Class SettingsForm
         '
         'numMaxCount
         '
-        Me.numMaxCount.Location = New System.Drawing.Point(160, 73)
+        Me.numMaxCount.Location = New System.Drawing.Point(180, 73)
         Me.numMaxCount.Maximum = New Decimal(New Integer() {10000, 0, 0, 0})
         Me.numMaxCount.Minimum = New Decimal(New Integer() {1, 0, 0, 0})
         Me.numMaxCount.Name = "numMaxCount"
         Me.numMaxCount.Size = New System.Drawing.Size(60, 22)
-        Me.numMaxCount.TabIndex = 3
+        Me.numMaxCount.TabIndex = 5
         Me.numMaxCount.Value = New Decimal(New Integer() {100, 0, 0, 0})
         '
         'lblImportOrder
@@ -200,10 +227,10 @@ Partial Class SettingsForm
         Me.cboImportOrder.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.cboImportOrder.FormattingEnabled = True
         Me.cboImportOrder.Items.AddRange(New Object() {"古い順（推奨）", "新しい順"})
-        Me.cboImportOrder.Location = New System.Drawing.Point(160, 99)
+        Me.cboImportOrder.Location = New System.Drawing.Point(180, 99)
         Me.cboImportOrder.Name = "cboImportOrder"
         Me.cboImportOrder.Size = New System.Drawing.Size(140, 21)
-        Me.cboImportOrder.TabIndex = 5
+        Me.cboImportOrder.TabIndex = 6
         '
         'chkSyncDeletions
         '
@@ -211,7 +238,7 @@ Partial Class SettingsForm
         Me.chkSyncDeletions.Location = New System.Drawing.Point(8, 128)
         Me.chkSyncDeletions.Name = "chkSyncDeletions"
         Me.chkSyncDeletions.Size = New System.Drawing.Size(380, 17)
-        Me.chkSyncDeletions.TabIndex = 6
+        Me.chkSyncDeletions.TabIndex = 7
         Me.chkSyncDeletions.Text = "Outlook 側で削除されたメールをアーカイブからも削除する"
         '
         'grpFolders
@@ -219,7 +246,7 @@ Partial Class SettingsForm
         Me.grpFolders.Controls.Add(Me.lstFolders)
         Me.grpFolders.Controls.Add(Me.btnAddFolder)
         Me.grpFolders.Controls.Add(Me.btnRemoveFolder)
-        Me.grpFolders.Location = New System.Drawing.Point(8, 276)
+        Me.grpFolders.Location = New System.Drawing.Point(8, 302)
         Me.grpFolders.Name = "grpFolders"
         Me.grpFolders.Size = New System.Drawing.Size(488, 130)
         Me.grpFolders.TabIndex = 2
@@ -255,7 +282,7 @@ Partial Class SettingsForm
         Me.grpDisplay.Controls.Add(Me.chkDefaultHtml)
         Me.grpDisplay.Controls.Add(Me.chkSortAscending)
         Me.grpDisplay.Controls.Add(Me.chkShowImportResult)
-        Me.grpDisplay.Location = New System.Drawing.Point(8, 414)
+        Me.grpDisplay.Location = New System.Drawing.Point(8, 440)
         Me.grpDisplay.Name = "grpDisplay"
         Me.grpDisplay.Size = New System.Drawing.Size(488, 94)
         Me.grpDisplay.TabIndex = 3
@@ -296,7 +323,7 @@ Partial Class SettingsForm
         Me.grpTray.Controls.Add(Me.chkMinimizeToTray)
         Me.grpTray.Controls.Add(Me.chkCloseToTray)
         Me.grpTray.Controls.Add(Me.chkShowBalloonOnImport)
-        Me.grpTray.Location = New System.Drawing.Point(8, 516)
+        Me.grpTray.Location = New System.Drawing.Point(8, 542)
         Me.grpTray.Name = "grpTray"
         Me.grpTray.Size = New System.Drawing.Size(488, 118)
         Me.grpTray.TabIndex = 6
@@ -342,7 +369,7 @@ Partial Class SettingsForm
         'grpData
         '
         Me.grpData.Controls.Add(Me.btnResetData)
-        Me.grpData.Location = New System.Drawing.Point(8, 642)
+        Me.grpData.Location = New System.Drawing.Point(8, 668)
         Me.grpData.Name = "grpData"
         Me.grpData.Size = New System.Drawing.Size(488, 56)
         Me.grpData.TabIndex = 5
@@ -361,7 +388,7 @@ Partial Class SettingsForm
         '
         Me.pnlButtons.Controls.Add(Me.btnOk)
         Me.pnlButtons.Controls.Add(Me.btnCancel)
-        Me.pnlButtons.Location = New System.Drawing.Point(8, 706)
+        Me.pnlButtons.Location = New System.Drawing.Point(8, 732)
         Me.pnlButtons.Name = "pnlButtons"
         Me.pnlButtons.Size = New System.Drawing.Size(488, 34)
         Me.pnlButtons.TabIndex = 4
@@ -390,7 +417,7 @@ Partial Class SettingsForm
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.Font = New System.Drawing.Font("Meiryo UI", 9.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(128, Byte))
         Me.CancelButton = Me.btnCancel
-        Me.ClientSize = New System.Drawing.Size(512, 750)
+        Me.ClientSize = New System.Drawing.Size(512, 776)
         Me.Controls.Add(Me.grpPaths)
         Me.Controls.Add(Me.grpAutoImport)
         Me.Controls.Add(Me.grpFolders)
@@ -430,8 +457,10 @@ Partial Class SettingsForm
     Friend WithEvents btnBrowseAttach As System.Windows.Forms.Button
     Friend WithEvents grpAutoImport As System.Windows.Forms.GroupBox
     Friend WithEvents chkAutoImportEnabled As System.Windows.Forms.CheckBox
-    Friend WithEvents lblInterval As System.Windows.Forms.Label
+    Friend WithEvents rdoInterval As System.Windows.Forms.RadioButton
+    Friend WithEvents rdoScheduled As System.Windows.Forms.RadioButton
     Friend WithEvents numInterval As System.Windows.Forms.NumericUpDown
+    Friend WithEvents dtpScheduledTime As System.Windows.Forms.DateTimePicker
     Friend WithEvents lblMaxCount As System.Windows.Forms.Label
     Friend WithEvents numMaxCount As System.Windows.Forms.NumericUpDown
     Friend WithEvents lblImportOrder As System.Windows.Forms.Label

@@ -32,7 +32,22 @@ Public Class SettingsForm
         txtDbPath.Text = _settings.DbFilePath
         txtAttachDir.Text = _settings.AttachmentDirectory
         chkAutoImportEnabled.Checked = _settings.AutoImportEnabled
+        If _settings.AutoImportMode = 1 Then
+            rdoScheduled.Checked = True
+        Else
+            rdoInterval.Checked = True
+        End If
         numInterval.Value = CDec(Math.Min(CInt(numInterval.Maximum), Math.Max(CInt(numInterval.Minimum), _settings.AutoImportIntervalMinutes)))
+
+        ' 定時取り込み時刻を DateTimePicker に設定
+        Dim scheduledTime As DateTime
+        If DateTime.TryParseExact(_settings.ScheduledImportTime, "HH:mm",
+                                   System.Globalization.CultureInfo.InvariantCulture,
+                                   System.Globalization.DateTimeStyles.None, scheduledTime) Then
+            dtpScheduledTime.Value = scheduledTime
+        End If
+
+        UpdateImportModeControls()
         numMaxCount.Value = CDec(Math.Min(CInt(numMaxCount.Maximum), Math.Max(CInt(numMaxCount.Minimum), _settings.MaxImportCount)))
 
         lstFolders.Items.Clear()
@@ -60,7 +75,9 @@ Public Class SettingsForm
         _settings.DbFilePath = txtDbPath.Text.Trim()
         _settings.AttachmentDirectory = txtAttachDir.Text.Trim()
         _settings.AutoImportEnabled = chkAutoImportEnabled.Checked
+        _settings.AutoImportMode = If(rdoScheduled.Checked, 1, 0)
         _settings.AutoImportIntervalMinutes = CInt(numInterval.Value)
+        _settings.ScheduledImportTime = dtpScheduledTime.Value.ToString("HH:mm")
         _settings.MaxImportCount = CInt(numMaxCount.Value)
 
         Dim folders As New List(Of String)()
@@ -81,6 +98,26 @@ Public Class SettingsForm
         _settings.MinimizeToTray = chkMinimizeToTray.Checked
         _settings.CloseToTray = chkCloseToTray.Checked
         _settings.ShowBalloonOnImport = chkShowBalloonOnImport.Checked
+    End Sub
+
+    ' ════════════════════════════════════════════════════════════
+    '  イベントハンドラ ─ 自動取り込みモード
+    ' ════════════════════════════════════════════════════════════
+
+    ''' <summary>ラジオボタンの選択に応じてコントロールの有効/無効を切り替える。</summary>
+    Private Sub UpdateImportModeControls()
+        numInterval.Enabled = rdoInterval.Checked
+        dtpScheduledTime.Enabled = rdoScheduled.Checked
+        ' 間隔モードのみ最大件数を設定可能（定時は完全同期のため無制限）
+        numMaxCount.Enabled = rdoInterval.Checked
+    End Sub
+
+    Private Sub rdoInterval_CheckedChanged(sender As Object, e As System.EventArgs) Handles rdoInterval.CheckedChanged
+        UpdateImportModeControls()
+    End Sub
+
+    Private Sub rdoScheduled_CheckedChanged(sender As Object, e As System.EventArgs) Handles rdoScheduled.CheckedChanged
+        UpdateImportModeControls()
     End Sub
 
     ' ════════════════════════════════════════════════════════════

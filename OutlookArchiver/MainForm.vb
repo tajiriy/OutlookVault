@@ -14,6 +14,8 @@ Public Class MainForm
     Private _dbManager As Data.DatabaseManager
     Private _repo As Data.EmailRepository
     Private _autoImportTimer As System.Windows.Forms.Timer
+    Private _scheduledImportTimer As System.Windows.Forms.Timer
+    Private _lastScheduledRunDate As DateTime = DateTime.MinValue
 
     Private _emailCache As List(Of Models.Email)
     Private _currentFolder As String      ' Nothing = すべて
@@ -150,6 +152,11 @@ Public Class MainForm
         _autoImportTimer = New System.Windows.Forms.Timer()
         _autoImportTimer.Interval = _settings.AutoImportIntervalMinutes * 60 * 1000
         AddHandler _autoImportTimer.Tick, AddressOf AutoImportTimer_Tick
+
+        ' 定時取り込み用タイマー（1分間隔で時刻をチェック）
+        _scheduledImportTimer = New System.Windows.Forms.Timer()
+        _scheduledImportTimer.Interval = 60 * 1000
+        AddHandler _scheduledImportTimer.Tick, AddressOf ScheduledImportTimer_Tick
     End Sub
 
     ''' <summary>メール一覧の複数選択・コンテキストメニューをコードで設定する。</summary>
@@ -325,9 +332,10 @@ Public Class MainForm
     End Sub
 
     ''' <summary>
+    ''' 取り込みを実行する。fullSync=True の場合は最大件数制限なしで完全同期する。
     ''' Outlook COM は STA スレッドが必要なため、TaskCompletionSource + 専用STAスレッドで実行する。
     ''' </summary>
-    Private Async Function RunImportAsync() As Task
+    Private Async Function RunImportAsync(Optional fullSync As Boolean = False) As Task
         If _isImporting Then Return
         _isImporting = True
         _importCts = New System.Threading.CancellationTokenSource()
@@ -349,7 +357,7 @@ Public Class MainForm
 
             Dim tcs As New TaskCompletionSource(Of Services.ImportResult)()
             Dim targetFolders As List(Of String) = _settings.TargetFolders
-            Dim maxCount As Integer = _settings.MaxImportCount
+            Dim maxCount As Integer = If(fullSync, Integer.MaxValue, _settings.MaxImportCount)
             Dim repo As Data.EmailRepository = _repo
             Dim settings As Config.AppSettings = _settings
             Dim dbManager As Data.DatabaseManager = _dbManager
@@ -552,14 +560,26 @@ Public Class MainForm
 
     Private Sub StartAutoImport()
         _autoImportEnabled = True
-        _autoImportTimer.Start()
-        btnAutoImport.Text = "自動: ●"
-        btnAutoImport.ToolTipText = "自動取り込み停止（クリックで停止）"
+        If _settings.AutoImportMode = 1 Then
+            ' 定時モード
+            _autoImportTimer.Stop()
+            _scheduledImportTimer.Start()
+            Dim timeStr As String = _settings.ScheduledImportTime
+            btnAutoImport.Text = "定時: " & timeStr
+            btnAutoImport.ToolTipText = String.Format("定時取り込み {0}（クリックで停止）", timeStr)
+        Else
+            ' 間隔モード
+            _scheduledImportTimer.Stop()
+            _autoImportTimer.Start()
+            btnAutoImport.Text = "自動: ●"
+            btnAutoImport.ToolTipText = "自動取り込み停止（クリックで停止）"
+        End If
     End Sub
 
     Private Sub StopAutoImport()
         _autoImportEnabled = False
         _autoImportTimer.Stop()
+        _scheduledImportTimer.Stop()
         btnAutoImport.Text = "自動: ▶"
         btnAutoImport.ToolTipText = "自動取り込み開始（クリックで開始）"
     End Sub
@@ -574,6 +594,19 @@ Public Class MainForm
 
     Private Async Sub AutoImportTimer_Tick(sender As Object, e As EventArgs)
         Await RunImportAsync()
+    End Sub
+
+    ''' <summary>定時取り込み: 1分間隔で現在時刻と設定時刻を比較し、一致したら完全同期を実行する。</summary>
+    Private Async Sub ScheduledImportTimer_Tick(sender As Object, e As EventArgs)
+        Dim nowTime As String = DateTime.Now.ToString("HH:mm")
+        If nowTime <> _settings.ScheduledImportTime Then Return
+
+        ' 同じ日に2回実行しない
+        If _lastScheduledRunDate.Date = DateTime.Today Then Return
+        _lastScheduledRunDate = DateTime.Today
+
+        Services.Logger.Info(String.Format("定時取り込みを開始します（{0}）", nowTime))
+        Await RunImportAsync(fullSync:=True)
     End Sub
 
     ' ════════════════════════════════════════════════════════════
@@ -1091,6 +1124,10 @@ Public Class MainForm
             StartAutoImport()
         ElseIf Not _settings.AutoImportEnabled AndAlso _autoImportEnabled Then
             StopAutoImport()
+        ElseIf _settings.AutoImportEnabled AndAlso _autoImportEnabled Then
+            ' モードや時刻が変わった可能性があるため再起動
+            StopAutoImport()
+            StartAutoImport()
         End If
     End Sub
 

@@ -59,6 +59,16 @@ Namespace Config
             End Set
         End Property
 
+        ''' <summary>自動取り込みモード（0: 間隔, 1: 定時）</summary>
+        Public Property AutoImportMode As Integer
+            Get
+                Return GetInt("AutoImportMode", defaultValue:=0)
+            End Get
+            Set(value As Integer)
+                SaveSetting("AutoImportMode", value.ToString())
+            End Set
+        End Property
+
         ''' <summary>自動取り込みのポーリング間隔（分）</summary>
         Public Property AutoImportIntervalMinutes As Integer
             Get
@@ -66,6 +76,17 @@ Namespace Config
             End Get
             Set(value As Integer)
                 SaveSetting("AutoImportIntervalMinutes", value.ToString())
+            End Set
+        End Property
+
+        ''' <summary>定時取り込みの時刻（HH:mm 形式）</summary>
+        Public Property ScheduledImportTime As String
+            Get
+                Dim val As String = ConfigurationManager.AppSettings("ScheduledImportTime")
+                Return If(String.IsNullOrEmpty(val), "20:00", val)
+            End Get
+            Set(value As String)
+                SaveSetting("ScheduledImportTime", value)
             End Set
         End Property
 
