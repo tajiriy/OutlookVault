@@ -57,7 +57,7 @@ Namespace Controls
             Me.splitConversation.Dock = System.Windows.Forms.DockStyle.Fill
             Me.splitConversation.Name = "splitConversation"
             Me.splitConversation.Orientation = System.Windows.Forms.Orientation.Horizontal
-            Me.splitConversation.SplitterDistance = 150
+            Me.splitConversation.SplitterDistance = 100
             Me.splitConversation.TabIndex = 0
             '
             ' Panel1: スレッド一覧
