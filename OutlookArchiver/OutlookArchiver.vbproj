@@ -90,6 +90,7 @@
     </Compile>
     <Compile Include="Data\DatabaseManager.vb" />
     <Compile Include="Data\EmailRepository.vb" />
+    <Compile Include="Services\Logger.vb" />
     <Compile Include="Services\ImportLogWriter.vb" />
     <Compile Include="Services\ImportService.vb" />
     <Compile Include="Services\OutlookService.vb" />

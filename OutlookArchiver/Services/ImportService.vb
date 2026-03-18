@@ -113,6 +113,7 @@ Namespace Services
 
             Dim folder As Outlook.MAPIFolder = _outlookSvc.FindFolder(folderName)
             If folder Is Nothing Then
+                Logger.Warn("フォルダが見つかりません: " & folderName)
                 result.Errors.Add(New ImportErrorEntry(folderName, "", "", "フォルダが見つかりません: " & folderName))
                 result.ErrorCount += 1
                 Return result
@@ -120,6 +121,7 @@ Namespace Services
 
             Dim items As Outlook.Items = folder.Items
             Dim totalCount As Integer = items.Count
+            Logger.Info(String.Format("フォルダ '{0}' の取り込みを開始します（{1}件）", folderName, totalCount))
             result.TotalOutlookCount += totalCount
             Dim attachBaseDir As String = _settings.AttachmentDirectory
 
@@ -188,6 +190,7 @@ Namespace Services
                         Catch
                         End Try
                         result.Errors.Add(New ImportErrorEntry(folderName, errMsgId, subject, ex.Message))
+                        Logger.Error(String.Format("メール取り込みエラー — フォルダ: {0}, 件名: {1}", folderName, subject), ex)
                     End Try
 
                     ' 進捗通知
@@ -204,8 +207,16 @@ Namespace Services
                 ' 残分をコミット
                 _repo.CommitBulk()
 
-            Catch
+                Logger.Info(String.Format("フォルダ '{0}' の取り込みが完了しました — 新規: {1}件, スキップ: {2}件, エラー: {3}件",
+                    folderName, result.ImportedCount, result.SkippedCount, result.ErrorCount))
+
+            Catch ex As OperationCanceledException
                 _repo.RollbackBulk()
+                Logger.Info(String.Format("フォルダ '{0}' の取り込みが中断されました", folderName))
+                Throw
+            Catch ex As Exception
+                _repo.RollbackBulk()
+                Logger.Error(String.Format("フォルダ '{0}' の取り込み中にエラーが発生しました", folderName), ex)
                 Throw
             Finally
                 _threadingSvc.ClearCaches()
@@ -263,7 +274,12 @@ Namespace Services
                                        Optional progress As IProgress(Of SyncDeletionProgress) = Nothing,
                                        Optional cancellationToken As CancellationToken = Nothing) As Integer
             Dim folder As Outlook.MAPIFolder = _outlookSvc.FindFolder(folderName)
-            If folder Is Nothing Then Return 0
+            If folder Is Nothing Then
+                Logger.Warn("削除同期: フォルダが見つかりません: " & folderName)
+                Return 0
+            End If
+
+            Logger.Info(String.Format("フォルダ '{0}' の削除同期を開始します", folderName))
 
             ' Outlook 側の全 MessageID を取得（軽量スキャン）
             Dim scanProgress As IProgress(Of Integer) = Nothing
@@ -293,7 +309,10 @@ Namespace Services
                 End If
             Next
 
-            If idsToDelete.Count = 0 Then Return 0
+            If idsToDelete.Count = 0 Then
+                Logger.Info(String.Format("フォルダ '{0}' の削除同期が完了しました — 削除対象なし", folderName))
+                Return 0
+            End If
 
             ' 一括削除（添付ファイルパスも取得）
             Dim attachmentPaths As List(Of String) = _repo.DeleteEmailsByIds(idsToDelete)
@@ -309,6 +328,7 @@ Namespace Services
                 End Try
             Next
 
+            Logger.Info(String.Format("フォルダ '{0}' の削除同期が完了しました — {1}件削除", folderName, idsToDelete.Count))
             Return idsToDelete.Count
         End Function
 

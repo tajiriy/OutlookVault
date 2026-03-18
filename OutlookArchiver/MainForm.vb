@@ -42,6 +42,8 @@ Public Class MainForm
         Dim contentHeight As Integer = Me.ClientSize.Height - menuStrip.Height - toolStrip.Height - statusStrip.Height
         splitRight.SplitterDistance = CInt(contentHeight * 0.4)
 
+        Services.Logger.Info("アプリケーションを起動しました")
+
         InitializeServices()
         SetupAutoImportTimer()
         SetupEmailListColumns()
@@ -49,6 +51,8 @@ Public Class MainForm
         SetupToggleViewButton()
         LoadFolderTree()
         Await UpdateStatusBarAsync()
+
+        Services.Logger.Info("初期化が完了しました")
 
         If _settings.AutoImportEnabled Then
             StartAutoImport()
@@ -320,6 +324,10 @@ Public Class MainForm
         menuItemImportCancel.Enabled = True
         lblStatusCount.Text = "取り込み中..."
 
+        Services.Logger.Info("取り込みを開始します")
+        Dim importStopwatch As New System.Diagnostics.Stopwatch()
+        importStopwatch.Start()
+
         Try
             Dim progress As New Progress(Of Services.ImportProgress)(
                 Sub(p)
@@ -370,7 +378,21 @@ Public Class MainForm
             staThread.Start()
 
             Dim result As Services.ImportResult = Await tcs.Task
+            importStopwatch.Stop()
             _lastOutlookTotalCount = result.TotalOutlookCount
+
+            Services.Logger.Info(String.Format(
+                "取り込みが完了しました — 取り込み: {0}件, スキップ: {1}件, エラー: {2}件, 所要時間: {3:F1}秒",
+                result.ImportedCount, result.SkippedCount, result.ErrorCount,
+                importStopwatch.Elapsed.TotalSeconds))
+
+            If result.DeletedCount > 0 Then
+                Services.Logger.Info(String.Format("削除同期: {0}件", result.DeletedCount))
+            End If
+
+            If result.ErrorCount > 0 Then
+                Services.Logger.Warn(String.Format("取り込みエラーが {0}件 発生しました", result.ErrorCount))
+            End If
 
             Dim msg As String = String.Format(
                 "取り込み完了{0}取り込み: {1}件 / スキップ: {2}件 / エラー: {3}件",
@@ -404,11 +426,14 @@ Public Class MainForm
             Await LoadEmailsAsync(_currentFolder)
 
         Catch ex As OperationCanceledException
+            Services.Logger.Info("取り込みがユーザーにより中断されました")
             lblStatusCount.Text = "取り込みを中断しました"
         Catch ex As AggregateException When ex.InnerException IsNot Nothing AndAlso
                                              TypeOf ex.InnerException Is OperationCanceledException
+            Services.Logger.Info("取り込みがユーザーにより中断されました")
             lblStatusCount.Text = "取り込みを中断しました"
         Catch ex As Exception
+            Services.Logger.Error("取り込み中に予期しないエラーが発生しました", ex)
             MessageBox.Show("取り込みエラー:" & vbCrLf & ex.Message, "エラー",
                 MessageBoxButtons.OK, MessageBoxIcon.Error)
         Finally
@@ -899,6 +924,7 @@ Public Class MainForm
         End If
 
         SaveColumnSettings()
+        Services.Logger.Info("アプリケーションを終了します")
     End Sub
 
     ' ════════════════════════════════════════════════════════════
