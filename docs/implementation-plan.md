@@ -242,6 +242,57 @@ ImportService.ImportFolder(folderName)
 
 ---
 
+## インライン画像対応（HTMLメール cid: 参照の解決）
+
+### 問題
+
+HTMLメール中のインライン画像は `<img src="cid:image001@xxxxx">` 形式で参照されている。WebBrowserコントロールはこの `cid:` URL を解決できないため「×」表示になっていた。
+
+### 対応方針
+
+- 取り込み時: 添付ファイルの MAPI プロパティ `PR_ATTACH_CONTENT_ID`（0x3712001F）を参照し、値があればインライン画像として識別・保存
+- 表示時: HTML中の `cid:xxx` を `file:///` URL に置換してからWebBrowserにセット
+- 添付一覧: `IsInline=True` の添付ファイルは表示しない
+
+### DB スキーマ変更（マイグレーション）
+
+```sql
+ALTER TABLE attachments ADD COLUMN content_id TEXT;
+ALTER TABLE attachments ADD COLUMN is_inline  INTEGER DEFAULT 0;
+```
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---------|---------|
+| `Models/Attachment.vb` | `ContentId`・`IsInline` プロパティ追加 |
+| `Data/DatabaseManager.vb` | マイグレーションで `content_id` / `is_inline` カラム追加 |
+| `Data/EmailRepository.vb` | `InsertAttachment` / `MapAttachment` を新カラム対応 |
+| `Services/OutlookService.vb` | `GetAttachmentContentId()` ヘルパー追加。インライン画像の ContentId を取得・保存。`HasAttachments` カウントからインライン除外 |
+| `Controls/EmailPreviewControl.vb` | `ReplaceCidReferences()` で `cid:` → `file:///` 置換。添付一覧からインライン非表示 |
+
+### 注意事項
+
+既存取り込み済みメールはインライン画像が `IsInline=False` のまま残るため、該当メールは削除して再取り込みが必要。
+
+---
+
+## 設定バグ修正: 結果ダイアログが設定に関わらず表示される
+
+### 問題
+
+「取り込み完了時に結果ダイアログを表示する」をオフにしても結果ダイアログが表示されていた。
+
+### 原因
+
+`MainForm.RunImportAsync()` 内で `MessageBox.Show` を `ShowImportResult` 設定で分岐させる処理が欠落していた。
+
+### 修正
+
+`ShowImportResult` が False かつエラーなしの場合はダイアログを表示しないよう条件を追加。エラーがある場合は設定に関わらず常に表示する。
+
+---
+
 ## 技術的注意点
 
 | 項目 | 内容 |
