@@ -20,6 +20,8 @@ Namespace Services
         Private Const PropMessageId As String = "http://schemas.microsoft.com/mapi/proptag/0x1035001F"
         Private Const PropInReplyTo As String = "http://schemas.microsoft.com/mapi/proptag/0x1042001F"
         Private Const PropTransportHeaders As String = "http://schemas.microsoft.com/mapi/proptag/0x007D001F"
+        ''' <summary>PR_ATTACH_CONTENT_ID: 添付ファイルの MIME Content-ID（インライン画像の cid: 参照に対応）</summary>
+        Private Const PropAttachContentId As String = "http://schemas.microsoft.com/mapi/proptag/0x3712001F"
 
         Private ReadOnly _app As Outlook.Application
         Private ReadOnly _ns As Outlook.NameSpace
@@ -171,14 +173,15 @@ Namespace Services
                 TryCast(mailItem.Parent, Outlook.MAPIFolder)
             email.FolderName = If(parentFolder IsNot Nothing, parentFolder.Name, Nothing)
 
-            ' ── 添付ファイル（OLE 埋め込みを除いた実ファイル数でフラグを設定）──────
+            ' ── 添付ファイル（OLE 埋め込み・インライン画像を除いた実ファイル数でフラグを設定）──────
             Dim realAttachCount As Integer = 0
             Dim mailAtts As Outlook.Attachments = mailItem.Attachments
             For attIdx As Integer = 1 To mailAtts.Count
                 Dim a As Outlook.Attachment = CType(mailAtts.Item(attIdx), Outlook.Attachment)
-                If a.Type <> Outlook.OlAttachmentType.olOLE Then
-                    realAttachCount += 1
-                End If
+                If a.Type = Outlook.OlAttachmentType.olOLE Then Continue For
+                Dim cid As String = GetAttachmentContentId(a)
+                If Not String.IsNullOrEmpty(cid) Then Continue For  ' インライン画像はカウント外
+                realAttachCount += 1
             Next
             email.HasAttachments = realAttachCount > 0
 
@@ -221,6 +224,7 @@ Namespace Services
 
                 Dim originalName As String = att.FileName
                 Dim sanitized As String = SanitizeFileName(originalName)
+                Dim contentId As String = GetAttachmentContentId(att)
 
                 Try
                     ' 保存先ディレクトリを初回ファイル保存直前に作成（空フォルダを残さない）
@@ -240,6 +244,8 @@ Namespace Services
                     model.FileName = originalName
                     model.FilePath = Path.Combine(subDir, Path.GetFileName(targetPath))
                     model.FileSize = fi.Length
+                    model.ContentId = contentId
+                    model.IsInline = Not String.IsNullOrEmpty(contentId)
                     result.Add(model)
                 Catch ex As Exception
                     Dim errMsg As String = "添付保存エラー [" & originalName & "]: " & ex.Message
@@ -353,6 +359,31 @@ Namespace Services
         Private Shared Function JsonStr(s As String) As String
             If s Is Nothing Then Return "null"
             Return """" & s.Replace("\", "\\").Replace("""", "\""") & """"
+        End Function
+
+        ' ════════════════════════════════════════════════════════════
+        '  添付ファイルヘルパー
+        ' ════════════════════════════════════════════════════════════
+
+        ''' <summary>
+        ''' 添付ファイルの MIME Content-ID を取得する。
+        ''' Content-ID がない（通常の添付ファイル）場合は Nothing を返す。
+        ''' </summary>
+        Private Shared Function GetAttachmentContentId(att As Outlook.Attachment) As String
+            Try
+                Dim pa As Outlook.PropertyAccessor = att.PropertyAccessor
+                Dim val As Object = pa.GetProperty(PropAttachContentId)
+                If val Is Nothing Then Return Nothing
+                If Not TypeOf val Is String Then Return Nothing
+                Dim cid As String = CType(val, String).Trim()
+                ' "<xxx@yyy>" 形式の山括弧を除去して正規化
+                If cid.StartsWith("<") AndAlso cid.EndsWith(">") Then
+                    cid = cid.Substring(1, cid.Length - 2)
+                End If
+                Return If(String.IsNullOrEmpty(cid), Nothing, cid)
+            Catch
+                Return Nothing
+            End Try
         End Function
 
         ' ════════════════════════════════════════════════════════════

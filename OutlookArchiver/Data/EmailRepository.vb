@@ -74,8 +74,8 @@ SELECT last_insert_rowid();"
         ''' <summary>添付ファイルメタデータを DB に挿入し、採番された ID を返す。</summary>
         Public Function InsertAttachment(attachment As Models.Attachment) As Integer
             Const sql As String = "
-INSERT INTO attachments (email_id, file_name, file_path, file_size, mime_type)
-VALUES (@email_id, @file_name, @file_path, @file_size, @mime_type);
+INSERT INTO attachments (email_id, file_name, file_path, file_size, mime_type, content_id, is_inline)
+VALUES (@email_id, @file_name, @file_path, @file_size, @mime_type, @content_id, @is_inline);
 SELECT last_insert_rowid();"
 
             Using conn As SQLiteConnection = _dbManager.GetConnection()
@@ -85,6 +85,8 @@ SELECT last_insert_rowid();"
                     cmd.Parameters.AddWithValue("@file_path", attachment.FilePath)
                     cmd.Parameters.AddWithValue("@file_size", CType(attachment.FileSize, Object))
                     cmd.Parameters.AddWithValue("@mime_type", NullableStr(attachment.MimeType))
+                    cmd.Parameters.AddWithValue("@content_id", NullableStr(attachment.ContentId))
+                    cmd.Parameters.AddWithValue("@is_inline", CType(If(attachment.IsInline, 1, 0), Object))
                     Return Convert.ToInt32(cmd.ExecuteScalar())
                 End Using
             End Using
@@ -475,6 +477,9 @@ SELECT last_insert_rowid();"
             Dim sizeOrd As Integer = reader.GetOrdinal("file_size")
             If Not reader.IsDBNull(sizeOrd) Then att.FileSize = reader.GetInt64(sizeOrd)
             att.MimeType = GetStr(reader, "mime_type")
+            att.ContentId = GetStr(reader, "content_id")
+            Dim isInlineOrd As Integer = reader.GetOrdinal("is_inline")
+            If Not reader.IsDBNull(isInlineOrd) Then att.IsInline = reader.GetInt32(isInlineOrd) = 1
             Return att
         End Function
 

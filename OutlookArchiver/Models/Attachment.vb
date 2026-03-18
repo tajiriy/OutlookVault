@@ -14,6 +14,10 @@ Namespace Models
         Public Property FileSize As Long
         Public Property MimeType As String
         Public Property CreatedAt As DateTime
+        ''' <summary>MIME Content-ID（インライン画像の cid: 参照に対応）</summary>
+        Public Property ContentId As String
+        ''' <summary>True の場合はメール本文中にインライン表示される画像（添付ファイル一覧には表示しない）</summary>
+        Public Property IsInline As Boolean
 
     End Class
 

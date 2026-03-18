@@ -98,10 +98,17 @@ CREATE TABLE IF NOT EXISTS deleted_message_ids (
         ''' <summary>既存 DB への列追加など、スキーマ変更を安全に適用する。</summary>
         Private Sub ApplyMigrations(conn As SQLiteConnection)
             ' email_size 列が存在しない旧 DB に追加する
+            TryAddColumn(conn, "ALTER TABLE emails ADD COLUMN email_size INTEGER DEFAULT 0;")
+            ' インライン画像対応: attachments テーブルに content_id / is_inline を追加する
+            TryAddColumn(conn, "ALTER TABLE attachments ADD COLUMN content_id TEXT;")
+            TryAddColumn(conn, "ALTER TABLE attachments ADD COLUMN is_inline INTEGER DEFAULT 0;")
+        End Sub
+
+        ''' <summary>ALTER TABLE ADD COLUMN を試みる。重複列エラーは無視する。</summary>
+        Private Sub TryAddColumn(conn As SQLiteConnection, sql As String)
             Try
-                ExecuteNonQuery(conn, "ALTER TABLE emails ADD COLUMN email_size INTEGER DEFAULT 0;")
+                ExecuteNonQuery(conn, sql)
             Catch ex As SQLiteException
-                ' 既に存在する場合は無視（SQLite は "duplicate column name" エラーを返す）
                 If Not ex.Message.Contains("duplicate column name") Then
                     Throw
                 End If

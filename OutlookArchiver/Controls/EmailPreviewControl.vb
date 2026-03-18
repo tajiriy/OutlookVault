@@ -3,6 +3,7 @@ Option Strict On
 Option Infer Off
 
 Imports System.IO
+Imports System.Text.RegularExpressions
 
 Namespace Controls
 
@@ -91,6 +92,7 @@ Namespace Controls
 
             If _showHtml Then
                 Dim html As String = If(email.BodyHtml, String.Empty)
+                html = ReplaceCidReferences(html, email.Attachments)
                 If Not String.IsNullOrEmpty(_highlightQuery) Then
                     html = InjectHighlightScript(html, _highlightQuery)
                 End If
@@ -105,6 +107,43 @@ Namespace Controls
                 btnToggleView.Text = "HTML 表示"
             End If
         End Sub
+
+        ''' <summary>
+        ''' HTML 中の cid:xxx 参照を、対応するインライン画像の file:/// URL に置換して返す。
+        ''' 対応する添付がない cid: はそのまま残す。
+        ''' </summary>
+        Private Shared Function ReplaceCidReferences(html As String,
+                                                     attachments As List(Of Models.Attachment)) As String
+            If String.IsNullOrEmpty(html) Then Return html
+            If attachments Is Nothing OrElse attachments.Count = 0 Then Return html
+
+            ' ContentId → 絶対ファイルパスの辞書を構築（大文字小文字を区別しない）
+            Dim cidMap As New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+            For Each att As Models.Attachment In attachments
+                If att.IsInline AndAlso Not String.IsNullOrEmpty(att.ContentId) Then
+                    If Not cidMap.ContainsKey(att.ContentId) Then
+                        cidMap.Add(att.ContentId, att.FilePath)
+                    End If
+                End If
+            Next
+
+            If cidMap.Count = 0 Then Return html
+
+            ' src="cid:xxx" または src='cid:xxx' を置換する
+            Return Regex.Replace(
+                html,
+                "(?i)(src\s*=\s*[""'])cid:([^""']+)([""'])",
+                Function(m As Match) As String
+                    Dim cidVal As String = m.Groups(2).Value.Trim()
+                    Dim filePath As String = Nothing
+                    If cidMap.TryGetValue(cidVal, filePath) AndAlso File.Exists(filePath) Then
+                        ' Windows パスを file:/// URL に変換（バックスラッシュをスラッシュに）
+                        Dim fileUrl As String = "file:///" & filePath.Replace("\"c, "/"c)
+                        Return m.Groups(1).Value & fileUrl & m.Groups(3).Value
+                    End If
+                    Return m.Value
+                End Function)
+        End Function
 
         ''' <summary>FTS クエリから最初の検索語を抽出する（"column:term" → "term"、引用符除去）。</summary>
         Private Function ExtractFirstTerm(query As String) As String
@@ -188,7 +227,11 @@ Namespace Controls
                 Return
             End If
 
+            Dim hasVisible As Boolean = False
             For Each att As Models.Attachment In attachments
+                ' インライン画像は添付ファイル一覧に表示しない
+                If att.IsInline Then Continue For
+
                 Dim btn As New System.Windows.Forms.Button()
                 btn.Text = att.FileName
                 btn.Tag = att
@@ -197,8 +240,9 @@ Namespace Controls
                 btn.Padding = New System.Windows.Forms.Padding(4, 0, 4, 0)
                 AddHandler btn.Click, AddressOf AttachmentButton_Click
                 flowAttachments.Controls.Add(btn)
+                hasVisible = True
             Next
-            pnlAttachments.Visible = True
+            pnlAttachments.Visible = hasVisible
         End Sub
 
         ' ════════════════════════════════════════════════════════════
@@ -210,6 +254,7 @@ Namespace Controls
             _showHtml = Not _showHtml
             If _showHtml Then
                 Dim html As String = If(_currentEmail.BodyHtml, String.Empty)
+                html = ReplaceCidReferences(html, _currentEmail.Attachments)
                 If Not String.IsNullOrEmpty(_highlightQuery) Then
                     html = InjectHighlightScript(html, _highlightQuery)
                 End If
