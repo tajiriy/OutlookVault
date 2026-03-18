@@ -18,6 +18,7 @@ Public Class MainForm
     Private _emailCache As List(Of Models.Email)
     Private _currentFolder As String      ' Nothing = すべて
     Private _isImporting As Boolean
+    Private _importCts As System.Threading.CancellationTokenSource
     Private _lastOutlookTotalCount As Integer = -1  ' -1 = 未取得
     Private _autoImportEnabled As Boolean
     Private _searchQuery As String        ' 現在の検索クエリ（Nothing = 検索なし）
@@ -263,6 +264,7 @@ Public Class MainForm
     Private Async Function RunImportAsync() As Task
         If _isImporting Then Return
         _isImporting = True
+        _importCts = New System.Threading.CancellationTokenSource()
         btnImportNow.Enabled = False
         menuItemImportNow.Enabled = False
         lblStatusCount.Text = "取り込み中..."
@@ -291,17 +293,19 @@ Public Class MainForm
                     End Sub)
             End If
 
+            Dim ct As System.Threading.CancellationToken = _importCts.Token
+
             Dim staThread As New System.Threading.Thread(
                 Sub()
                     Try
                         Using outlookSvc As Services.OutlookService = Services.OutlookService.Connect()
                             Dim threadingSvc As New Services.ThreadingService(repo)
                             Dim importSvc As New Services.ImportService(outlookSvc, repo, threadingSvc, settings, dbManager)
-                            Dim importResult As Services.ImportResult = importSvc.ImportFolders(targetFolders, maxCount, progress)
+                            Dim importResult As Services.ImportResult = importSvc.ImportFolders(targetFolders, maxCount, progress, ct)
 
                             ' 削除同期
                             If syncDeletions Then
-                                importResult.DeletedCount = importSvc.SyncDeletionsForFolders(targetFolders, syncProgress)
+                                importResult.DeletedCount = importSvc.SyncDeletionsForFolders(targetFolders, syncProgress, ct)
                             End If
 
                             tcs.SetResult(importResult)
@@ -335,11 +339,20 @@ Public Class MainForm
             LoadFolderTree()
             LoadEmails(_currentFolder)
 
+        Catch ex As OperationCanceledException
+            lblStatusCount.Text = "取り込みを中断しました"
+        Catch ex As AggregateException When ex.InnerException IsNot Nothing AndAlso
+                                             TypeOf ex.InnerException Is OperationCanceledException
+            lblStatusCount.Text = "取り込みを中断しました"
         Catch ex As Exception
             MessageBox.Show("取り込みエラー:" & vbCrLf & ex.Message, "エラー",
                 MessageBoxButtons.OK, MessageBoxIcon.Error)
         Finally
             _isImporting = False
+            If _importCts IsNot Nothing Then
+                _importCts.Dispose()
+                _importCts = Nothing
+            End If
             btnImportNow.Enabled = True
             menuItemImportNow.Enabled = True
             UpdateStatusBar()
@@ -727,8 +740,35 @@ Public Class MainForm
         _settings.EmailListSortAscending = _sortAscending
     End Sub
 
-    ''' <summary>フォーム終了時に列設定を保存する。</summary>
+    ''' <summary>フォーム終了時に列設定を保存する。取り込み中の場合は確認ダイアログを表示する。</summary>
     Private Sub MainForm_FormClosing(sender As Object, e As FormClosingEventArgs) Handles MyBase.FormClosing
+        If _isImporting Then
+            Dim answer As DialogResult = MessageBox.Show(
+                "メールの取り込み中です。中断して終了しますか？" & vbCrLf &
+                "（処理中のバッチはロールバックされます）",
+                "終了の確認",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2)
+
+            If answer = DialogResult.No Then
+                e.Cancel = True
+                Return
+            End If
+
+            ' キャンセルを要求して取り込みスレッドの終了を待機
+            If _importCts IsNot Nothing Then
+                _importCts.Cancel()
+            End If
+
+            ' 取り込みスレッドが終了するまで最大5秒間待機
+            Dim waitStart As DateTime = DateTime.Now
+            Do While _isImporting AndAlso (DateTime.Now - waitStart).TotalMilliseconds < 5000
+                System.Threading.Thread.Sleep(100)
+                Application.DoEvents()
+            Loop
+        End If
+
         SaveColumnSettings()
     End Sub
 

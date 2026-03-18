@@ -2,6 +2,7 @@ Option Explicit On
 Option Strict On
 Option Infer Off
 
+Imports System.Threading
 Imports Outlook = Microsoft.Office.Interop.Outlook
 
 Namespace Services
@@ -89,7 +90,8 @@ Namespace Services
                                      maxCount As Integer,
                                      existingIds As HashSet(Of String),
                                      deletedIds As HashSet(Of String),
-                                     Optional progress As IProgress(Of ImportProgress) = Nothing) As ImportResult
+                                     Optional progress As IProgress(Of ImportProgress) = Nothing,
+                                     Optional cancellationToken As CancellationToken = Nothing) As ImportResult
             Dim result As New ImportResult()
 
             Dim folder As Outlook.MAPIFolder = _outlookSvc.FindFolder(folderName)
@@ -137,6 +139,7 @@ Namespace Services
                     Function() i <= totalCount,
                     Function() i >= 1)
                 Do While endCond() AndAlso result.ImportedCount < maxCount
+                    cancellationToken.ThrowIfCancellationRequested()
                     Dim rawItem As Object = items.Item(i)
                     i += stepDir
 
@@ -198,7 +201,8 @@ Namespace Services
         ''' <summary>複数フォルダをまとめて取り込む。</summary>
         Public Function ImportFolders(folderNames As IEnumerable(Of String),
                                       maxCountPerFolder As Integer,
-                                      Optional progress As IProgress(Of ImportProgress) = Nothing) As ImportResult
+                                      Optional progress As IProgress(Of ImportProgress) = Nothing,
+                                      Optional cancellationToken As CancellationToken = Nothing) As ImportResult
             Dim total As New ImportResult()
 
             ' 全 MessageID を一括キャッシュ（1件ずつ SQL を発行するより大幅に高速）
@@ -209,7 +213,8 @@ Namespace Services
             _outlookSvc.LoadExchangeCache(_repo.LoadExchangeAddressCache())
 
             For Each name As String In folderNames
-                Dim r As ImportResult = ImportFolder(name, maxCountPerFolder, existingIds, deletedIds, progress)
+                cancellationToken.ThrowIfCancellationRequested()
+                Dim r As ImportResult = ImportFolder(name, maxCountPerFolder, existingIds, deletedIds, progress, cancellationToken)
                 total.ImportedCount += r.ImportedCount
                 total.SkippedCount += r.SkippedCount
                 total.ErrorCount += r.ErrorCount
@@ -233,7 +238,8 @@ Namespace Services
         ''' Outlook に存在しないものを削除する。
         ''' </summary>
         Public Function SyncDeletions(folderName As String,
-                                       Optional progress As IProgress(Of SyncDeletionProgress) = Nothing) As Integer
+                                       Optional progress As IProgress(Of SyncDeletionProgress) = Nothing,
+                                       Optional cancellationToken As CancellationToken = Nothing) As Integer
             Dim folder As Outlook.MAPIFolder = _outlookSvc.FindFolder(folderName)
             If folder Is Nothing Then Return 0
 
@@ -286,10 +292,12 @@ Namespace Services
 
         ''' <summary>複数フォルダの削除同期を実行する。</summary>
         Public Function SyncDeletionsForFolders(folderNames As IEnumerable(Of String),
-                                                 Optional progress As IProgress(Of SyncDeletionProgress) = Nothing) As Integer
+                                                 Optional progress As IProgress(Of SyncDeletionProgress) = Nothing,
+                                                 Optional cancellationToken As CancellationToken = Nothing) As Integer
             Dim totalDeleted As Integer = 0
             For Each name As String In folderNames
-                totalDeleted += SyncDeletions(name, progress)
+                cancellationToken.ThrowIfCancellationRequested()
+                totalDeleted += SyncDeletions(name, progress, cancellationToken)
             Next
             Return totalDeleted
         End Function
