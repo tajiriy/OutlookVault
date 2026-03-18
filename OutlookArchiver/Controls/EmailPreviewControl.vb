@@ -66,7 +66,8 @@ Namespace Controls
             _attachToolTip = New System.Windows.Forms.ToolTip()
             _attachToolTip.AutoPopDelay = 10000
             _attachToolTip.InitialDelay = 300
-            _attachToolTip.ReshowDelay = 200
+            _attachToolTip.ReshowDelay = 100
+            _attachToolTip.ShowAlways = True
 
             ' 添付ファイル右クリックメニュー
             _attachContextMenu = New System.Windows.Forms.ContextMenuStrip()
@@ -384,13 +385,13 @@ Namespace Controls
                 AddHandler pb.DoubleClick, AddressOf AttachmentPanel_DoubleClick
                 AddHandler lbl.DoubleClick, AddressOf AttachmentPanel_DoubleClick
 
-                ' ホバー時のハイライト
+                ' ホバー時のハイライト（子コントロール間の移動でちらつかないよう遅延チェック）
                 AddHandler pnl.MouseEnter, AddressOf AttachmentPanel_MouseEnter
                 AddHandler pnl.MouseLeave, AddressOf AttachmentPanel_MouseLeave
-                AddHandler pb.MouseEnter, Sub() pnl.BackColor = System.Drawing.SystemColors.ControlLight
-                AddHandler pb.MouseLeave, Sub() pnl.BackColor = System.Drawing.Color.Transparent
-                AddHandler lbl.MouseEnter, Sub() pnl.BackColor = System.Drawing.SystemColors.ControlLight
-                AddHandler lbl.MouseLeave, Sub() pnl.BackColor = System.Drawing.Color.Transparent
+                AddHandler pb.MouseEnter, AddressOf AttachmentChild_MouseEnter
+                AddHandler pb.MouseLeave, AddressOf AttachmentChild_MouseLeave
+                AddHandler lbl.MouseEnter, AddressOf AttachmentChild_MouseEnter
+                AddHandler lbl.MouseLeave, AddressOf AttachmentChild_MouseLeave
 
                 pnl.Controls.Add(pb)
                 pnl.Controls.Add(lbl)
@@ -581,7 +582,42 @@ Namespace Controls
 
         Private Sub AttachmentPanel_MouseLeave(sender As Object, e As EventArgs)
             Dim pnl As System.Windows.Forms.Panel = TryCast(sender, System.Windows.Forms.Panel)
-            If pnl IsNot Nothing Then pnl.BackColor = System.Drawing.Color.Transparent
+            If pnl IsNot Nothing Then
+                ' 子コントロールへの移動時にちらつかないよう遅延チェック
+                pnl.BeginInvoke(DirectCast(Sub()
+                    If Not pnl.IsDisposed Then
+                        Dim cursorPos As Point = pnl.PointToClient(System.Windows.Forms.Cursor.Position)
+                        If Not pnl.ClientRectangle.Contains(cursorPos) Then
+                            pnl.BackColor = System.Drawing.Color.Transparent
+                        End If
+                    End If
+                End Sub, MethodInvoker))
+            End If
+        End Sub
+
+        Private Sub AttachmentChild_MouseEnter(sender As Object, e As EventArgs)
+            Dim ctrl As System.Windows.Forms.Control = TryCast(sender, System.Windows.Forms.Control)
+            If ctrl IsNot Nothing Then
+                Dim pnl As System.Windows.Forms.Panel = TryCast(ctrl.Parent, System.Windows.Forms.Panel)
+                If pnl IsNot Nothing Then pnl.BackColor = System.Drawing.SystemColors.ControlLight
+            End If
+        End Sub
+
+        Private Sub AttachmentChild_MouseLeave(sender As Object, e As EventArgs)
+            Dim ctrl As System.Windows.Forms.Control = TryCast(sender, System.Windows.Forms.Control)
+            If ctrl IsNot Nothing Then
+                Dim pnl As System.Windows.Forms.Panel = TryCast(ctrl.Parent, System.Windows.Forms.Panel)
+                If pnl IsNot Nothing Then
+                    pnl.BeginInvoke(DirectCast(Sub()
+                        If Not pnl.IsDisposed Then
+                            Dim cursorPos As Point = pnl.PointToClient(System.Windows.Forms.Cursor.Position)
+                            If Not pnl.ClientRectangle.Contains(cursorPos) Then
+                                pnl.BackColor = System.Drawing.Color.Transparent
+                            End If
+                        End If
+                    End Sub, MethodInvoker))
+                End If
+            End If
         End Sub
 
         Private Sub ShowImagePreview(filePath As String, fileName As String)

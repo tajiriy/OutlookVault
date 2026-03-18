@@ -131,9 +131,9 @@ Namespace Controls
             Me.tlpHeader.Controls.Add(Me.lblToCaption, 0, 3)
             Me.tlpHeader.Controls.Add(Me.lblToValue, 1, 3)
 
-            ' ── pnlAttachments (Dock=Bottom, 100px) ────────────────────
-            Me.pnlAttachments.Dock = System.Windows.Forms.DockStyle.Bottom
-            Me.pnlAttachments.Height = 110
+            ' ── pnlAttachments (Dock=Right, 200px) ────────────────────
+            Me.pnlAttachments.Dock = System.Windows.Forms.DockStyle.Right
+            Me.pnlAttachments.Width = 200
             Me.pnlAttachments.Name = "pnlAttachments"
             Me.pnlAttachments.Padding = New System.Windows.Forms.Padding(4)
             Me.pnlAttachments.Visible = False
@@ -152,7 +152,7 @@ Namespace Controls
             Me.flowAttachments.Name = "flowAttachments"
             Me.flowAttachments.AutoScroll = True
             Me.flowAttachments.WrapContents = True
-            Me.flowAttachments.FlowDirection = System.Windows.Forms.FlowDirection.LeftToRight
+            Me.flowAttachments.FlowDirection = System.Windows.Forms.FlowDirection.TopDown
 
             ' ── pnlBody (Dock=Fill) ─────────────────────────────────────
             Me.pnlBody.Dock = System.Windows.Forms.DockStyle.Fill
