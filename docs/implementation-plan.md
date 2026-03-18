@@ -241,6 +241,16 @@ ImportService.ImportFolder(folderName)
 - **変更後**: `OutlookService.ExtractMessageId()` で MessageID のみ軽量取得 → 重複判定 → 新規メールのみ `ExtractEmailData()` でフルデータ抽出
 - スキップ時の COM 呼び出しが 15回以上 → 1〜2回に削減され、取り込み済みメールの走査が大幅に高速化
 
+#### Exchange アドレス解決のキャッシュ化
+
+- `OutlookService` に `_exchangeSmtpCache`（`Dictionary(Of String, String)`）を追加
+- `GetSenderEmail` / `SerializeRecipients` 内の `GetExchangeUser()` 呼び出しを `ResolveExchangeAddress()` 経由に統一
+- 同じ EX アドレスに対する2回目以降のネットワーク往復を回避。社内メールの多い環境で効果大
+
+#### 添付ファイル OLE チェックの短絡評価
+
+- `mailItem.Attachments.Count = 0` の場合、OLE チェックループをスキップして即 `HasAttachments = False`
+
 ### 設定画面の追加機能
 
 - **データ初期化**: 設定画面に「データ管理」グループを追加。「データ初期化...」ボタンで DB ファイルと添付ファイルディレクトリを一括削除（確認ダイアログ付き）
