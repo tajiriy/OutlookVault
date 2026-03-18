@@ -16,7 +16,7 @@ Namespace Forms
         Inherits Form
 
         Private Shared ReadOnly TableNames() As String = {"emails", "attachments", "deleted_message_ids", "exchange_address_cache"}
-        Private Const MaxColumnWidth As Integer = 300
+        Private Const MaxColumnWidth As Integer = 200
 
         Private ReadOnly _dbManager As Data.DatabaseManager
 
@@ -88,7 +88,7 @@ Namespace Forms
             dgv.AllowUserToAddRows = False
             dgv.AllowUserToDeleteRows = False
             dgv.AllowUserToOrderColumns = True
-            dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells
+            dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
             dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect
             dgv.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithAutoHeaderText
             ' ちらつき防止: DoubleBuffered を有効化
@@ -136,9 +136,10 @@ Namespace Forms
         End Sub
 
         Private Sub ApplyMaxColumnWidth()
+            ' 表示中のセルに基づいて1回だけ自動サイズ計算し、上限を適用
+            dgv.AutoResizeColumns(DataGridViewAutoSizeColumnsMode.DisplayedCells)
             For Each col As DataGridViewColumn In dgv.Columns
                 If col.Width > MaxColumnWidth Then
-                    col.AutoSizeMode = DataGridViewAutoSizeColumnMode.None
                     col.Width = MaxColumnWidth
                 End If
             Next
