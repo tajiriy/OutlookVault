@@ -16,6 +16,7 @@ Namespace Forms
         Inherits Form
 
         Private Shared ReadOnly TableNames() As String = {"emails", "attachments", "deleted_message_ids", "exchange_address_cache"}
+        Private Const MaxColumnWidth As Integer = 300
 
         Private ReadOnly _dbManager As Data.DatabaseManager
 
@@ -71,7 +72,7 @@ Namespace Forms
 
             lblRowCount = New Label()
             lblRowCount.AutoSize = True
-            lblRowCount.Location = New Drawing.Point(620, 10)
+            lblRowCount.Anchor = CType(AnchorStyles.Top Or AnchorStyles.Right, AnchorStyles)
             lblRowCount.Text = ""
 
             pnlTop.Controls.Add(lblTable)
@@ -87,7 +88,7 @@ Namespace Forms
             dgv.AllowUserToAddRows = False
             dgv.AllowUserToDeleteRows = False
             dgv.AllowUserToOrderColumns = True
-            dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells
+            dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells
             dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect
             dgv.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithAutoHeaderText
             ' ちらつき防止: DoubleBuffered を有効化
@@ -127,10 +128,20 @@ Namespace Forms
                 End If
                 _dataTable = _dbManager.GetTableData(tableName)
                 _bindingSource.DataSource = _dataTable
+                ApplyMaxColumnWidth()
                 UpdateRowCount()
             Finally
                 dgv.ResumeLayout()
             End Try
+        End Sub
+
+        Private Sub ApplyMaxColumnWidth()
+            For Each col As DataGridViewColumn In dgv.Columns
+                If col.Width > MaxColumnWidth Then
+                    col.AutoSizeMode = DataGridViewAutoSizeColumnMode.None
+                    col.Width = MaxColumnWidth
+                End If
+            Next
         End Sub
 
         Private Sub TxtFilter_TextChanged(sender As Object, e As EventArgs)
@@ -180,6 +191,9 @@ Namespace Forms
             Else
                 lblRowCount.Text = String.Format("{0} / {1} 件", filtered, total)
             End If
+            ' 右上に配置
+            lblRowCount.Location = New Drawing.Point(
+                pnlTop.ClientSize.Width - lblRowCount.Width - 10, 10)
         End Sub
 
         Private Sub dgv_ColumnHeaderMouseClick(sender As Object, e As DataGridViewCellMouseEventArgs) Handles dgv.ColumnHeaderMouseClick
