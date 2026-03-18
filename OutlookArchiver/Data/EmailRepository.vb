@@ -14,16 +14,73 @@ Namespace Data
 
         Private ReadOnly _dbManager As DatabaseManager
 
+        ' ── バルク書き込み用（トランザクション共有） ──────────────────
+        Private _bulkConn As SQLiteConnection = Nothing
+        Private _bulkTx As SQLiteTransaction = Nothing
+
         Public Sub New(dbManager As DatabaseManager)
             _dbManager = dbManager
         End Sub
 
         ' ════════════════════════════════════════════════════════════
+        '  バルク書き込みモード（トランザクション管理）
+        ' ════════════════════════════════════════════════════════════
+
+        ''' <summary>バルク書き込みモードを開始する。呼び出し後の Insert は共有トランザクション上で実行される。</summary>
+        Public Sub BeginBulk()
+            If _bulkConn IsNot Nothing Then Return  ' 既に開始済み
+            _bulkConn = _dbManager.GetConnection()
+            _bulkTx = _bulkConn.BeginTransaction()
+        End Sub
+
+        ''' <summary>バルクトランザクションをコミットして接続を閉じる。</summary>
+        Public Sub CommitBulk()
+            If _bulkTx IsNot Nothing Then
+                _bulkTx.Commit()
+                _bulkTx.Dispose()
+                _bulkTx = Nothing
+            End If
+            If _bulkConn IsNot Nothing Then
+                _bulkConn.Dispose()
+                _bulkConn = Nothing
+            End If
+        End Sub
+
+        ''' <summary>バルクトランザクションをロールバックして接続を閉じる。</summary>
+        Public Sub RollbackBulk()
+            If _bulkTx IsNot Nothing Then
+                _bulkTx.Rollback()
+                _bulkTx.Dispose()
+                _bulkTx = Nothing
+            End If
+            If _bulkConn IsNot Nothing Then
+                _bulkConn.Dispose()
+                _bulkConn = Nothing
+            End If
+        End Sub
+
+        ''' <summary>バルクモードが有効かどうかを返す。</summary>
+        Public ReadOnly Property IsBulkActive As Boolean
+            Get
+                Return _bulkConn IsNot Nothing
+            End Get
+        End Property
+
+        ' ════════════════════════════════════════════════════════════
         '  Email 挿入・更新
         ' ════════════════════════════════════════════════════════════
 
-        ''' <summary>メールを DB に挿入し、採番された ID を返す。</summary>
+        ''' <summary>メールを DB に挿入し、採番された ID を返す。バルクモード中は共有トランザクションを使用する。</summary>
         Public Function InsertEmail(email As Models.Email) As Integer
+            If _bulkConn IsNot Nothing Then
+                Return InsertEmailCore(email, _bulkConn)
+            End If
+            Using conn As SQLiteConnection = _dbManager.GetConnection()
+                Return InsertEmailCore(email, conn)
+            End Using
+        End Function
+
+        Private Function InsertEmailCore(email As Models.Email, conn As SQLiteConnection) As Integer
             Const sql As String = "
 INSERT INTO emails (
     message_id, in_reply_to, [references], thread_id, entry_id,
@@ -37,33 +94,30 @@ INSERT INTO emails (
     @body_text, @body_html, @received_at, @sent_at, @folder_name, @has_attachments, @email_size
 );
 SELECT last_insert_rowid();"
-
-            Using conn As SQLiteConnection = _dbManager.GetConnection()
-                Using cmd As New SQLiteCommand(sql, conn)
-                    cmd.Parameters.AddWithValue("@message_id", NullableStr(email.MessageId))
-                    cmd.Parameters.AddWithValue("@in_reply_to", NullableStr(email.InReplyTo))
-                    cmd.Parameters.AddWithValue("@references", NullableStr(email.References))
-                    cmd.Parameters.AddWithValue("@thread_id", NullableStr(email.ThreadId))
-                    cmd.Parameters.AddWithValue("@entry_id", NullableStr(email.EntryId))
-                    cmd.Parameters.AddWithValue("@subject", NullableStr(email.Subject))
-                    cmd.Parameters.AddWithValue("@normalized_subject", NullableStr(email.NormalizedSubject))
-                    cmd.Parameters.AddWithValue("@sender_name", NullableStr(email.SenderName))
-                    cmd.Parameters.AddWithValue("@sender_email", NullableStr(email.SenderEmail))
-                    cmd.Parameters.AddWithValue("@to_recipients", NullableStr(email.ToRecipients))
-                    cmd.Parameters.AddWithValue("@cc_recipients", NullableStr(email.CcRecipients))
-                    cmd.Parameters.AddWithValue("@bcc_recipients", NullableStr(email.BccRecipients))
-                    cmd.Parameters.AddWithValue("@body_text", NullableStr(email.BodyText))
-                    cmd.Parameters.AddWithValue("@body_html", NullableStr(email.BodyHtml))
-                    cmd.Parameters.AddWithValue("@received_at", email.ReceivedAt.ToString("o"))
-                    cmd.Parameters.AddWithValue("@sent_at",
-                        If(email.SentAt.HasValue,
-                           CType(email.SentAt.Value.ToString("o"), Object),
-                           CType(DBNull.Value, Object)))
-                    cmd.Parameters.AddWithValue("@folder_name", NullableStr(email.FolderName))
-                    cmd.Parameters.AddWithValue("@has_attachments", CType(If(email.HasAttachments, 1, 0), Object))
-                    cmd.Parameters.AddWithValue("@email_size", CType(email.EmailSize, Object))
-                    Return Convert.ToInt32(cmd.ExecuteScalar())
-                End Using
+            Using cmd As New SQLiteCommand(sql, conn)
+                cmd.Parameters.AddWithValue("@message_id", NullableStr(email.MessageId))
+                cmd.Parameters.AddWithValue("@in_reply_to", NullableStr(email.InReplyTo))
+                cmd.Parameters.AddWithValue("@references", NullableStr(email.References))
+                cmd.Parameters.AddWithValue("@thread_id", NullableStr(email.ThreadId))
+                cmd.Parameters.AddWithValue("@entry_id", NullableStr(email.EntryId))
+                cmd.Parameters.AddWithValue("@subject", NullableStr(email.Subject))
+                cmd.Parameters.AddWithValue("@normalized_subject", NullableStr(email.NormalizedSubject))
+                cmd.Parameters.AddWithValue("@sender_name", NullableStr(email.SenderName))
+                cmd.Parameters.AddWithValue("@sender_email", NullableStr(email.SenderEmail))
+                cmd.Parameters.AddWithValue("@to_recipients", NullableStr(email.ToRecipients))
+                cmd.Parameters.AddWithValue("@cc_recipients", NullableStr(email.CcRecipients))
+                cmd.Parameters.AddWithValue("@bcc_recipients", NullableStr(email.BccRecipients))
+                cmd.Parameters.AddWithValue("@body_text", NullableStr(email.BodyText))
+                cmd.Parameters.AddWithValue("@body_html", NullableStr(email.BodyHtml))
+                cmd.Parameters.AddWithValue("@received_at", email.ReceivedAt.ToString("o"))
+                cmd.Parameters.AddWithValue("@sent_at",
+                    If(email.SentAt.HasValue,
+                       CType(email.SentAt.Value.ToString("o"), Object),
+                       CType(DBNull.Value, Object)))
+                cmd.Parameters.AddWithValue("@folder_name", NullableStr(email.FolderName))
+                cmd.Parameters.AddWithValue("@has_attachments", CType(If(email.HasAttachments, 1, 0), Object))
+                cmd.Parameters.AddWithValue("@email_size", CType(email.EmailSize, Object))
+                Return Convert.ToInt32(cmd.ExecuteScalar())
             End Using
         End Function
 
@@ -71,24 +125,30 @@ SELECT last_insert_rowid();"
         '  Attachment 挿入
         ' ════════════════════════════════════════════════════════════
 
-        ''' <summary>添付ファイルメタデータを DB に挿入し、採番された ID を返す。</summary>
+        ''' <summary>添付ファイルメタデータを DB に挿入し、採番された ID を返す。バルクモード中は共有トランザクションを使用する。</summary>
         Public Function InsertAttachment(attachment As Models.Attachment) As Integer
+            If _bulkConn IsNot Nothing Then
+                Return InsertAttachmentCore(attachment, _bulkConn)
+            End If
+            Using conn As SQLiteConnection = _dbManager.GetConnection()
+                Return InsertAttachmentCore(attachment, conn)
+            End Using
+        End Function
+
+        Private Function InsertAttachmentCore(attachment As Models.Attachment, conn As SQLiteConnection) As Integer
             Const sql As String = "
 INSERT INTO attachments (email_id, file_name, file_path, file_size, mime_type, content_id, is_inline)
 VALUES (@email_id, @file_name, @file_path, @file_size, @mime_type, @content_id, @is_inline);
 SELECT last_insert_rowid();"
-
-            Using conn As SQLiteConnection = _dbManager.GetConnection()
-                Using cmd As New SQLiteCommand(sql, conn)
-                    cmd.Parameters.AddWithValue("@email_id", CType(attachment.EmailId, Object))
-                    cmd.Parameters.AddWithValue("@file_name", attachment.FileName)
-                    cmd.Parameters.AddWithValue("@file_path", attachment.FilePath)
-                    cmd.Parameters.AddWithValue("@file_size", CType(attachment.FileSize, Object))
-                    cmd.Parameters.AddWithValue("@mime_type", NullableStr(attachment.MimeType))
-                    cmd.Parameters.AddWithValue("@content_id", NullableStr(attachment.ContentId))
-                    cmd.Parameters.AddWithValue("@is_inline", CType(If(attachment.IsInline, 1, 0), Object))
-                    Return Convert.ToInt32(cmd.ExecuteScalar())
-                End Using
+            Using cmd As New SQLiteCommand(sql, conn)
+                cmd.Parameters.AddWithValue("@email_id", CType(attachment.EmailId, Object))
+                cmd.Parameters.AddWithValue("@file_name", attachment.FileName)
+                cmd.Parameters.AddWithValue("@file_path", attachment.FilePath)
+                cmd.Parameters.AddWithValue("@file_size", CType(attachment.FileSize, Object))
+                cmd.Parameters.AddWithValue("@mime_type", NullableStr(attachment.MimeType))
+                cmd.Parameters.AddWithValue("@content_id", NullableStr(attachment.ContentId))
+                cmd.Parameters.AddWithValue("@is_inline", CType(If(attachment.IsInline, 1, 0), Object))
+                Return Convert.ToInt32(cmd.ExecuteScalar())
             End Using
         End Function
 
@@ -347,6 +407,41 @@ SELECT last_insert_rowid();"
             Next
             Return False
         End Function
+
+        ' ════════════════════════════════════════════════════════════
+        '  スレッド判定キャッシュ構築
+        ' ════════════════════════════════════════════════════════════
+
+        ''' <summary>
+        ''' スレッド判定用インメモリキャッシュを構築する。
+        ''' 取り込み開始前に呼び出し、ThreadingService.LoadCaches() に渡す。
+        ''' </summary>
+        Public Sub GetThreadIdCaches(ByRef messageIdMap As Dictionary(Of String, String),
+                                     ByRef subjectMap As Dictionary(Of String, String))
+            messageIdMap = New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+            subjectMap = New Dictionary(Of String, String)(StringComparer.OrdinalIgnoreCase)
+
+            Const sql As String =
+                "SELECT message_id, normalized_subject, thread_id FROM emails WHERE thread_id IS NOT NULL"
+
+            Using conn As SQLiteConnection = _dbManager.GetConnection()
+                Using cmd As New SQLiteCommand(sql, conn)
+                    Using reader As SQLiteDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            Dim msgId As String = GetStr(reader, "message_id")
+                            Dim subject As String = GetStr(reader, "normalized_subject")
+                            Dim threadId As String = GetStr(reader, "thread_id")
+                            If Not String.IsNullOrEmpty(msgId) AndAlso Not messageIdMap.ContainsKey(msgId) Then
+                                messageIdMap.Add(msgId, threadId)
+                            End If
+                            If Not String.IsNullOrEmpty(subject) AndAlso Not subjectMap.ContainsKey(subject) Then
+                                subjectMap.Add(subject, threadId)
+                            End If
+                        End While
+                    End Using
+                End Using
+            End Using
+        End Sub
 
         ' ════════════════════════════════════════════════════════════
         '  削除・重複チェック

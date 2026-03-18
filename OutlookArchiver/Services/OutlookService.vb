@@ -173,15 +173,17 @@ Namespace Services
                 TryCast(mailItem.Parent, Outlook.MAPIFolder)
             email.FolderName = If(parentFolder IsNot Nothing, parentFolder.Name, Nothing)
 
-            ' ── 添付ファイル（OLE 埋め込み・インライン画像を除いた実ファイル数でフラグを設定）──────
+            ' ── 添付ファイル（OLE 埋め込みを除いた実ファイル数でフラグを設定）──────
+            ' ContentID の取得は SaveAttachments で行うため、ここでは OLE のみ除外する。
+            ' インライン画像を含む場合も HasAttachments = True になるが、
+            ' 添付パネルには IsInline=False のもののみ表示されるため実害はない。
             Dim realAttachCount As Integer = 0
             Dim mailAtts As Outlook.Attachments = mailItem.Attachments
             For attIdx As Integer = 1 To mailAtts.Count
                 Dim a As Outlook.Attachment = CType(mailAtts.Item(attIdx), Outlook.Attachment)
-                If a.Type = Outlook.OlAttachmentType.olOLE Then Continue For
-                Dim cid As String = GetAttachmentContentId(a)
-                If Not String.IsNullOrEmpty(cid) Then Continue For  ' インライン画像はカウント外
-                realAttachCount += 1
+                If a.Type <> Outlook.OlAttachmentType.olOLE Then
+                    realAttachCount += 1
+                End If
             Next
             email.HasAttachments = realAttachCount > 0
 

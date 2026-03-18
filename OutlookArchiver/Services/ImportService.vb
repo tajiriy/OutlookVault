@@ -69,6 +69,9 @@ Namespace Services
         ''' <param name="existingIds">取り込み済み MessageID のキャッシュ</param>
         ''' <param name="deletedIds">削除済み MessageID のキャッシュ</param>
         ''' <param name="progress">進捗通知（Nothing の場合は通知しない）</param>
+        ''' <summary>バルクトランザクションを N 件ごとに中間コミットする件数。</summary>
+        Private Const BulkCommitInterval As Integer = 50
+
         Public Function ImportFolder(folderName As String,
                                      maxCount As Integer,
                                      existingIds As HashSet(Of String),
@@ -92,45 +95,73 @@ Namespace Services
                 IO.Directory.CreateDirectory(attachBaseDir)
             End If
 
-            ' 設定に応じて古い順（1→N）または新しい順（N→1）でイテレート
-            Dim oldestFirst As Boolean = _settings.ImportOldestFirst
-            Dim i As Integer = If(oldestFirst, 1, totalCount)
-            Dim stepDir As Integer = If(oldestFirst, 1, -1)
-            Dim endCond As Func(Of Boolean) = If(oldestFirst,
-                Function() i <= totalCount,
-                Function() i >= 1)
-            Do While endCond() AndAlso result.ImportedCount < maxCount
-                Dim rawItem As Object = items.Item(i)
-                i += stepDir
+            ' ── スレッド判定インメモリキャッシュをロード ─────────────
+            Dim messageIdMap As Dictionary(Of String, String) = Nothing
+            Dim subjectMap As Dictionary(Of String, String) = Nothing
+            _repo.GetThreadIdCaches(messageIdMap, subjectMap)
+            _threadingSvc.LoadCaches(messageIdMap, subjectMap)
 
-                ' MailItem 以外（予定・タスク等）はスキップ
-                If Not TypeOf rawItem Is Outlook.MailItem Then Continue Do
+            ' ── DB バルク書き込みモード開始 ───────────────────────────
+            _repo.BeginBulk()
+            Dim sinceLastCommit As Integer = 0
 
-                Dim mailItem As Outlook.MailItem = CType(rawItem, Outlook.MailItem)
-                Dim subject As String = mailItem.Subject
+            Try
+                ' 設定に応じて古い順（1→N）または新しい順（N→1）でイテレート
+                Dim oldestFirst As Boolean = _settings.ImportOldestFirst
+                Dim i As Integer = If(oldestFirst, 1, totalCount)
+                Dim stepDir As Integer = If(oldestFirst, 1, -1)
+                Dim endCond As Func(Of Boolean) = If(oldestFirst,
+                    Function() i <= totalCount,
+                    Function() i >= 1)
+                Do While endCond() AndAlso result.ImportedCount < maxCount
+                    Dim rawItem As Object = items.Item(i)
+                    i += stepDir
 
-                Try
-                    Dim imported As Boolean = ProcessMailItem(mailItem, attachBaseDir, existingIds, deletedIds, result)
-                    If imported Then
-                        result.ImportedCount += 1
-                    Else
-                        result.SkippedCount += 1
+                    ' MailItem 以外（予定・タスク等）はスキップ
+                    If Not TypeOf rawItem Is Outlook.MailItem Then Continue Do
+
+                    Dim mailItem As Outlook.MailItem = CType(rawItem, Outlook.MailItem)
+                    Dim subject As String = mailItem.Subject
+
+                    Try
+                        Dim imported As Boolean = ProcessMailItem(mailItem, attachBaseDir, existingIds, deletedIds, result)
+                        If imported Then
+                            result.ImportedCount += 1
+                            sinceLastCommit += 1
+                            ' N 件ごとに中間コミット（クラッシュ時のデータロスを軽減）
+                            If sinceLastCommit >= BulkCommitInterval Then
+                                _repo.CommitBulk()
+                                _repo.BeginBulk()
+                                sinceLastCommit = 0
+                            End If
+                        Else
+                            result.SkippedCount += 1
+                        End If
+                    Catch ex As Exception
+                        result.ErrorCount += 1
+                        result.Errors.Add("エラー [" & subject & "]: " & ex.Message)
+                    End Try
+
+                    ' 進捗通知
+                    If progress IsNot Nothing Then
+                        Dim prog As New ImportProgress()
+                        prog.FolderName = folderName
+                        prog.ProcessedCount = result.ImportedCount + result.SkippedCount + result.ErrorCount
+                        prog.TotalCount = totalCount
+                        prog.CurrentSubject = subject
+                        progress.Report(prog)
                     End If
-                Catch ex As Exception
-                    result.ErrorCount += 1
-                    result.Errors.Add("エラー [" & subject & "]: " & ex.Message)
-                End Try
+                Loop
 
-                ' 進捗通知
-                If progress IsNot Nothing Then
-                    Dim prog As New ImportProgress()
-                    prog.FolderName = folderName
-                    prog.ProcessedCount = result.ImportedCount + result.SkippedCount + result.ErrorCount
-                    prog.TotalCount = totalCount
-                    prog.CurrentSubject = subject
-                    progress.Report(prog)
-                End If
-            Loop
+                ' 残分をコミット
+                _repo.CommitBulk()
+
+            Catch
+                _repo.RollbackBulk()
+                Throw
+            Finally
+                _threadingSvc.ClearCaches()
+            End Try
 
             Return result
         End Function
