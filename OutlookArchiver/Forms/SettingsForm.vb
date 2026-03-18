@@ -151,19 +151,41 @@ Public Class SettingsForm
     '  イベントハンドラ ─ 対象フォルダ
     ' ════════════════════════════════════════════════════════════
 
-    Private Sub btnAddFolder_Click(sender As Object, e As System.EventArgs) Handles btnAddFolder.Click
-        Dim name As String = Microsoft.VisualBasic.Interaction.InputBox(
-            "追加する Outlook フォルダ名を入力してください:", "フォルダ追加", String.Empty)
-        name = name.Trim()
-        If name.Length > 0 AndAlso Not lstFolders.Items.Contains(CType(name, Object)) Then
-            lstFolders.Items.Add(CType(name, Object))
-        End If
-    End Sub
+    Private Sub btnSelectFolders_Click(sender As Object, e As System.EventArgs) Handles btnSelectFolders.Click
+        ' Outlook に接続してフォルダ一覧を取得
+        Dim outlookSvc As Services.OutlookService = Nothing
+        Try
+            outlookSvc = Services.OutlookService.TryConnect()
+            If outlookSvc Is Nothing Then
+                System.Windows.Forms.MessageBox.Show(
+                    "Outlook に接続できませんでした。Outlook が起動していることを確認してください。",
+                    "接続エラー",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Warning)
+                Return
+            End If
 
-    Private Sub btnRemoveFolder_Click(sender As Object, e As System.EventArgs) Handles btnRemoveFolder.Click
-        If lstFolders.SelectedIndex >= 0 Then
-            lstFolders.Items.RemoveAt(lstFolders.SelectedIndex)
-        End If
+            Dim availableFolders As List(Of String) = outlookSvc.GetAvailableFolderNames()
+
+            ' 現在の選択済みフォルダをリストから取得
+            Dim currentSelection As New List(Of String)()
+            For Each item As Object In lstFolders.Items
+                Dim s As String = TryCast(item, String)
+                If s IsNot Nothing AndAlso s.Length > 0 Then currentSelection.Add(s)
+            Next
+
+            ' フォルダ選択ダイアログを表示
+            Using dlg As New FolderSelectForm(availableFolders, currentSelection)
+                If dlg.ShowDialog(Me) = System.Windows.Forms.DialogResult.OK Then
+                    lstFolders.Items.Clear()
+                    For Each folder As String In dlg.SelectedFolderNames
+                        lstFolders.Items.Add(CType(folder, Object))
+                    Next
+                End If
+            End Using
+        Finally
+            If outlookSvc IsNot Nothing Then outlookSvc.Dispose()
+        End Try
     End Sub
 
     ' ════════════════════════════════════════════════════════════

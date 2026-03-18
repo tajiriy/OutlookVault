@@ -22,6 +22,8 @@ Namespace Services
         Private Const PropTransportHeaders As String = "http://schemas.microsoft.com/mapi/proptag/0x007D001F"
         ''' <summary>PR_ATTACH_CONTENT_ID: 添付ファイルの MIME Content-ID（インライン画像の cid: 参照に対応）</summary>
         Private Const PropAttachContentId As String = "http://schemas.microsoft.com/mapi/proptag/0x3712001F"
+        ''' <summary>PR_ATTR_HIDDEN: フォルダの隠し属性（システムフォルダの判定に使用）</summary>
+        Private Const PropAttrHidden As String = "http://schemas.microsoft.com/mapi/proptag/0x10F4000B"
 
         Private ReadOnly _app As Outlook.Application
         Private ReadOnly _ns As Outlook.NameSpace
@@ -80,26 +82,85 @@ Namespace Services
         '  フォルダ一覧
         ' ════════════════════════════════════════════════════════════
 
-        ''' <summary>全ストアを検索してフォルダ表示名の一覧を返す。</summary>
+        ''' <summary>全ストアを検索してメールフォルダの表示名一覧を返す。</summary>
         Public Function GetAvailableFolderNames() As List(Of String)
+            ' 除外対象のシステムフォルダの EntryID を収集
+            Dim excludedIds As HashSet(Of String) = GetExcludedFolderEntryIds()
+
             Dim result As New List(Of String)()
             Dim stores As Outlook.Stores = _ns.Stores
             For i As Integer = 1 To stores.Count
                 Dim store As Outlook.Store = stores.Item(i)
                 Dim root As Outlook.MAPIFolder = store.GetRootFolder()
-                CollectFolderNames(root, result)
+                ' ルートフォルダ（ストア名）は除外し、サブフォルダのみ収集
+                Dim subFolders As Outlook.Folders = root.Folders
+                For j As Integer = 1 To subFolders.Count
+                    Dim childFolder As Outlook.MAPIFolder = CType(subFolders.Item(j), Outlook.MAPIFolder)
+                    CollectFolderNames(childFolder, result, excludedIds)
+                Next
             Next
             Return result
         End Function
 
-        Private Sub CollectFolderNames(folder As Outlook.MAPIFolder, result As List(Of String))
-            result.Add(folder.Name)
+        ''' <summary>除外対象のシステムフォルダ（同期の失敗、RSS フィード等）の EntryID セットを返す。</summary>
+        Private Function GetExcludedFolderEntryIds() As HashSet(Of String)
+            Dim ids As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
+            ' 除外するデフォルトフォルダの種別
+            Dim excludedTypes As Outlook.OlDefaultFolders() = New Outlook.OlDefaultFolders() {
+                Outlook.OlDefaultFolders.olFolderSyncIssues,
+                Outlook.OlDefaultFolders.olFolderConflicts,
+                Outlook.OlDefaultFolders.olFolderLocalFailures,
+                Outlook.OlDefaultFolders.olFolderServerFailures,
+                Outlook.OlDefaultFolders.olFolderRssFeeds
+            }
+            For Each folderType As Outlook.OlDefaultFolders In excludedTypes
+                Try
+                    Dim f As Outlook.MAPIFolder = _ns.GetDefaultFolder(folderType)
+                    If f IsNot Nothing Then ids.Add(f.EntryID)
+                Catch
+                End Try
+            Next
+            Return ids
+        End Function
+
+        Private Sub CollectFolderNames(folder As Outlook.MAPIFolder, result As List(Of String),
+                                       excludedIds As HashSet(Of String))
+            ' 除外対象フォルダとその配下はスキップ
+            If excludedIds.Contains(folder.EntryID) Then Return
+
+            ' メールフォルダのみ対象：ContainerClass が "IPF.Note" かつ隠しフォルダでないこと
+            If GetContainerClass(folder) = "IPF.Note" AndAlso
+               Not IsFolderHidden(folder) Then
+                result.Add(folder.Name)
+            End If
             Dim subFolders As Outlook.Folders = folder.Folders
             For i As Integer = 1 To subFolders.Count
                 Dim childFolder As Outlook.MAPIFolder = CType(subFolders.Item(i), Outlook.MAPIFolder)
-                CollectFolderNames(childFolder, result)
+                CollectFolderNames(childFolder, result, excludedIds)
             Next
         End Sub
+
+        ''' <summary>フォルダが隠し属性（PR_ATTR_HIDDEN）を持つかどうかを返す。</summary>
+        Private Shared Function IsFolderHidden(folder As Outlook.MAPIFolder) As Boolean
+            Try
+                Dim pa As Outlook.PropertyAccessor = folder.PropertyAccessor
+                Dim val As Object = pa.GetProperty(PropAttrHidden)
+                If TypeOf val Is Boolean Then Return CBool(val)
+            Catch
+            End Try
+            Return False
+        End Function
+
+        ''' <summary>フォルダの PR_CONTAINER_CLASS を返す。取得できない場合は空文字列。</summary>
+        Private Shared Function GetContainerClass(folder As Outlook.MAPIFolder) As String
+            Try
+                Dim pa As Outlook.PropertyAccessor = folder.PropertyAccessor
+                Dim val As Object = pa.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x3613001F")
+                If val IsNot Nothing AndAlso TypeOf val Is String Then Return CStr(val)
+            Catch
+            End Try
+            Return String.Empty
+        End Function
 
         ''' <summary>フォルダ名でフォルダを検索して返す。見つからない場合は Nothing。</summary>
         Public Function FindFolder(folderName As String) As Outlook.MAPIFolder

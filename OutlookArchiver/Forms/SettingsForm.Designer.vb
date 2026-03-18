@@ -39,8 +39,7 @@ Partial Class SettingsForm
         Me.cboImportOrder = New System.Windows.Forms.ComboBox()
         Me.grpFolders = New System.Windows.Forms.GroupBox()
         Me.lstFolders = New System.Windows.Forms.ListBox()
-        Me.btnAddFolder = New System.Windows.Forms.Button()
-        Me.btnRemoveFolder = New System.Windows.Forms.Button()
+        Me.btnSelectFolders = New System.Windows.Forms.Button()
         Me.grpDisplay = New System.Windows.Forms.GroupBox()
         Me.chkDefaultHtml = New System.Windows.Forms.CheckBox()
         Me.chkSortAscending = New System.Windows.Forms.CheckBox()
@@ -244,8 +243,7 @@ Partial Class SettingsForm
         'grpFolders
         '
         Me.grpFolders.Controls.Add(Me.lstFolders)
-        Me.grpFolders.Controls.Add(Me.btnAddFolder)
-        Me.grpFolders.Controls.Add(Me.btnRemoveFolder)
+        Me.grpFolders.Controls.Add(Me.btnSelectFolders)
         Me.grpFolders.Location = New System.Drawing.Point(8, 302)
         Me.grpFolders.Name = "grpFolders"
         Me.grpFolders.Size = New System.Drawing.Size(488, 130)
@@ -261,21 +259,13 @@ Partial Class SettingsForm
         Me.lstFolders.Size = New System.Drawing.Size(376, 98)
         Me.lstFolders.TabIndex = 0
         '
-        'btnAddFolder
+        'btnSelectFolders
         '
-        Me.btnAddFolder.Location = New System.Drawing.Point(392, 22)
-        Me.btnAddFolder.Name = "btnAddFolder"
-        Me.btnAddFolder.Size = New System.Drawing.Size(88, 26)
-        Me.btnAddFolder.TabIndex = 1
-        Me.btnAddFolder.Text = "追加..."
-        '
-        'btnRemoveFolder
-        '
-        Me.btnRemoveFolder.Location = New System.Drawing.Point(392, 54)
-        Me.btnRemoveFolder.Name = "btnRemoveFolder"
-        Me.btnRemoveFolder.Size = New System.Drawing.Size(88, 26)
-        Me.btnRemoveFolder.TabIndex = 2
-        Me.btnRemoveFolder.Text = "削除"
+        Me.btnSelectFolders.Location = New System.Drawing.Point(392, 22)
+        Me.btnSelectFolders.Name = "btnSelectFolders"
+        Me.btnSelectFolders.Size = New System.Drawing.Size(88, 26)
+        Me.btnSelectFolders.TabIndex = 1
+        Me.btnSelectFolders.Text = "選択..."
         '
         'grpDisplay
         '
@@ -467,8 +457,7 @@ Partial Class SettingsForm
     Friend WithEvents cboImportOrder As System.Windows.Forms.ComboBox
     Friend WithEvents grpFolders As System.Windows.Forms.GroupBox
     Friend WithEvents lstFolders As System.Windows.Forms.ListBox
-    Friend WithEvents btnAddFolder As System.Windows.Forms.Button
-    Friend WithEvents btnRemoveFolder As System.Windows.Forms.Button
+    Friend WithEvents btnSelectFolders As System.Windows.Forms.Button
     Friend WithEvents grpDisplay As System.Windows.Forms.GroupBox
     Friend WithEvents chkDefaultHtml As System.Windows.Forms.CheckBox
     Friend WithEvents chkSortAscending As System.Windows.Forms.CheckBox
