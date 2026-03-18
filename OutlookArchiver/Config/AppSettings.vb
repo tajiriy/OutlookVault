@@ -139,6 +139,37 @@ Namespace Config
             End Set
         End Property
 
+        ''' <summary>Windows 起動時にアプリを自動起動するか（レジストリ Run キーで管理）</summary>
+        Public Property StartWithWindows As Boolean
+            Get
+                Try
+                    Using key As Microsoft.Win32.RegistryKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                        "Software\Microsoft\Windows\CurrentVersion\Run", writable:=False)
+                        If key Is Nothing Then Return False
+                        Dim val As Object = key.GetValue("OutlookArchiver")
+                        Return val IsNot Nothing
+                    End Using
+                Catch
+                    Return False
+                End Try
+            End Get
+            Set(value As Boolean)
+                Try
+                    Using key As Microsoft.Win32.RegistryKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                        "Software\Microsoft\Windows\CurrentVersion\Run", writable:=True)
+                        If key Is Nothing Then Return
+                        If value Then
+                            Dim exePath As String = System.Reflection.Assembly.GetExecutingAssembly().Location
+                            key.SetValue("OutlookArchiver", """" & exePath & """ --minimized")
+                        Else
+                            key.DeleteValue("OutlookArchiver", throwOnMissingValue:=False)
+                        End If
+                    End Using
+                Catch
+                End Try
+            End Set
+        End Property
+
         ''' <summary>取り込み完了時にバルーン通知を表示するか</summary>
         Public Property ShowBalloonOnImport As Boolean
             Get

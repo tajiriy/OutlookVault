@@ -291,47 +291,58 @@ Partial Class SettingsForm
         '
         'grpTray
         '
+        Me.chkStartWithWindows = New System.Windows.Forms.CheckBox()
+        Me.grpTray.Controls.Add(Me.chkStartWithWindows)
         Me.grpTray.Controls.Add(Me.chkMinimizeToTray)
         Me.grpTray.Controls.Add(Me.chkCloseToTray)
         Me.grpTray.Controls.Add(Me.chkShowBalloonOnImport)
         Me.grpTray.Location = New System.Drawing.Point(8, 516)
         Me.grpTray.Name = "grpTray"
-        Me.grpTray.Size = New System.Drawing.Size(488, 94)
+        Me.grpTray.Size = New System.Drawing.Size(488, 118)
         Me.grpTray.TabIndex = 6
         Me.grpTray.TabStop = False
         Me.grpTray.Text = "タスクトレイ"
         '
+        'chkStartWithWindows
+        '
+        Me.chkStartWithWindows.AutoSize = True
+        Me.chkStartWithWindows.Location = New System.Drawing.Point(8, 22)
+        Me.chkStartWithWindows.Name = "chkStartWithWindows"
+        Me.chkStartWithWindows.Size = New System.Drawing.Size(296, 17)
+        Me.chkStartWithWindows.TabIndex = 0
+        Me.chkStartWithWindows.Text = "Windows 起動時に自動起動する（トレイに常駐）"
+        '
         'chkMinimizeToTray
         '
         Me.chkMinimizeToTray.AutoSize = True
-        Me.chkMinimizeToTray.Location = New System.Drawing.Point(8, 22)
+        Me.chkMinimizeToTray.Location = New System.Drawing.Point(8, 46)
         Me.chkMinimizeToTray.Name = "chkMinimizeToTray"
         Me.chkMinimizeToTray.Size = New System.Drawing.Size(296, 17)
-        Me.chkMinimizeToTray.TabIndex = 0
+        Me.chkMinimizeToTray.TabIndex = 1
         Me.chkMinimizeToTray.Text = "最小化時にタスクトレイに格納する"
         '
         'chkCloseToTray
         '
         Me.chkCloseToTray.AutoSize = True
-        Me.chkCloseToTray.Location = New System.Drawing.Point(8, 46)
+        Me.chkCloseToTray.Location = New System.Drawing.Point(8, 70)
         Me.chkCloseToTray.Name = "chkCloseToTray"
         Me.chkCloseToTray.Size = New System.Drawing.Size(296, 17)
-        Me.chkCloseToTray.TabIndex = 1
+        Me.chkCloseToTray.TabIndex = 2
         Me.chkCloseToTray.Text = "閉じるボタンでタスクトレイに格納する"
         '
         'chkShowBalloonOnImport
         '
         Me.chkShowBalloonOnImport.AutoSize = True
-        Me.chkShowBalloonOnImport.Location = New System.Drawing.Point(8, 70)
+        Me.chkShowBalloonOnImport.Location = New System.Drawing.Point(8, 94)
         Me.chkShowBalloonOnImport.Name = "chkShowBalloonOnImport"
         Me.chkShowBalloonOnImport.Size = New System.Drawing.Size(296, 17)
-        Me.chkShowBalloonOnImport.TabIndex = 2
+        Me.chkShowBalloonOnImport.TabIndex = 3
         Me.chkShowBalloonOnImport.Text = "取り込み完了時にバルーン通知を表示する"
         '
         'grpData
         '
         Me.grpData.Controls.Add(Me.btnResetData)
-        Me.grpData.Location = New System.Drawing.Point(8, 618)
+        Me.grpData.Location = New System.Drawing.Point(8, 642)
         Me.grpData.Name = "grpData"
         Me.grpData.Size = New System.Drawing.Size(488, 56)
         Me.grpData.TabIndex = 5
@@ -350,7 +361,7 @@ Partial Class SettingsForm
         '
         Me.pnlButtons.Controls.Add(Me.btnOk)
         Me.pnlButtons.Controls.Add(Me.btnCancel)
-        Me.pnlButtons.Location = New System.Drawing.Point(8, 682)
+        Me.pnlButtons.Location = New System.Drawing.Point(8, 706)
         Me.pnlButtons.Name = "pnlButtons"
         Me.pnlButtons.Size = New System.Drawing.Size(488, 34)
         Me.pnlButtons.TabIndex = 4
@@ -379,7 +390,7 @@ Partial Class SettingsForm
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.Font = New System.Drawing.Font("Meiryo UI", 9.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(128, Byte))
         Me.CancelButton = Me.btnCancel
-        Me.ClientSize = New System.Drawing.Size(512, 726)
+        Me.ClientSize = New System.Drawing.Size(512, 750)
         Me.Controls.Add(Me.grpPaths)
         Me.Controls.Add(Me.grpAutoImport)
         Me.Controls.Add(Me.grpFolders)
@@ -438,6 +449,7 @@ Partial Class SettingsForm
     Friend WithEvents chkMinimizeToTray As System.Windows.Forms.CheckBox
     Friend WithEvents chkCloseToTray As System.Windows.Forms.CheckBox
     Friend WithEvents chkShowBalloonOnImport As System.Windows.Forms.CheckBox
+    Friend WithEvents chkStartWithWindows As System.Windows.Forms.CheckBox
     Friend WithEvents grpData As System.Windows.Forms.GroupBox
     Friend WithEvents btnResetData As System.Windows.Forms.Button
     Friend WithEvents pnlButtons As System.Windows.Forms.Panel

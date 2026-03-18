@@ -49,6 +49,7 @@ Public Class SettingsForm
         chkSortAscending.Checked = _settings.ConversationSortAscending
         chkShowImportResult.Checked = _settings.ShowImportResult
 
+        chkStartWithWindows.Checked = _settings.StartWithWindows
         chkMinimizeToTray.Checked = _settings.MinimizeToTray
         chkCloseToTray.Checked = _settings.CloseToTray
         chkShowBalloonOnImport.Checked = _settings.ShowBalloonOnImport
@@ -76,6 +77,7 @@ Public Class SettingsForm
         _settings.ConversationSortAscending = chkSortAscending.Checked
         _settings.ShowImportResult = chkShowImportResult.Checked
 
+        _settings.StartWithWindows = chkStartWithWindows.Checked
         _settings.MinimizeToTray = chkMinimizeToTray.Checked
         _settings.CloseToTray = chkCloseToTray.Checked
         _settings.ShowBalloonOnImport = chkShowBalloonOnImport.Checked

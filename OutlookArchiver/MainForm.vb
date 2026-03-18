@@ -59,6 +59,16 @@ Public Class MainForm
         If _settings.AutoImportEnabled Then
             StartAutoImport()
         End If
+
+        ' --minimized 引数付きで起動された場合はトレイに直接格納
+        Dim args() As String = Environment.GetCommandLineArgs()
+        For Each arg As String In args
+            If String.Equals(arg, "--minimized", StringComparison.OrdinalIgnoreCase) Then
+                MinimizeToSystemTray()
+                Services.Logger.Info("--minimized 引数によりトレイに格納しました")
+                Exit For
+            End If
+        Next
     End Sub
 
     Private Sub InitializeServices()
