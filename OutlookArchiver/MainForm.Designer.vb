@@ -253,7 +253,7 @@ Partial Class MainForm
         '
         Me.splitMain.Panel2.Controls.Add(Me.splitRight)
         Me.splitMain.Size = New System.Drawing.Size(1271, 668)
-        Me.splitMain.SplitterDistance = 250
+        Me.splitMain.SplitterDistance = 300
         Me.splitMain.TabIndex = 0
         '
         'treeViewFolders
