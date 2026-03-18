@@ -1,4 +1,4 @@
-# OutlookArchiver デプロイスクリプト
+﻿# OutlookArchiver デプロイスクリプト
 # 使い方:
 #   .\deploy.ps1                              # デフォルト: C:\Tools\OutlookArchiver にデプロイ
 #   .\deploy.ps1 -DeployDir "D:\MyApp\OA"     # デプロイ先を指定
