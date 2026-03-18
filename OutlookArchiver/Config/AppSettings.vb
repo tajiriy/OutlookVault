@@ -110,7 +110,7 @@ Namespace Config
         ''' <summary>取り込み完了時に結果ダイアログを表示するか</summary>
         Public Property ShowImportResult As Boolean
             Get
-                Return GetBool("ShowImportResult", defaultValue:=True)
+                Return GetBool("ShowImportResult", defaultValue:=False)
             End Get
             Set(value As Boolean)
                 SaveSetting("ShowImportResult", value.ToString())
