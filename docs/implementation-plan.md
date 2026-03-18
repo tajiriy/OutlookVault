@@ -366,6 +366,41 @@ ALTER TABLE attachments ADD COLUMN is_inline  INTEGER DEFAULT 0;
 
 ---
 
+## テーブルビューア: 高度なフィルタ
+
+### 概要
+
+テーブルビューアのフィルタ機能を拡張。列指定・部分一致/完全一致・AND/OR 論理演算をサポート。
+
+### フィルタ構文
+
+| 入力形式 | 動作 | 例 |
+|---------|------|-----|
+| `テキスト` | 全文字列列で部分一致 (OR) | `amazon` |
+| `列名: 値` | 指定列で部分一致 (LIKE) | `subject: amazon` |
+| `列名= 値` | 指定列で完全一致 (=) | `id= 1` |
+| `条件 and 条件` | AND 結合 | `subject: amazon and sender_name: john` |
+| `条件 or 条件` | OR 結合 | `id= 1 or id= 2` |
+
+- **演算子優先順位**: AND > OR（`a AND b OR c` → `(a AND b) OR c`）
+- **列名**: 大文字小文字無視、完全一致
+- **値**: 大文字小文字無視
+- **括弧**: 非サポート
+
+### 追加ファイル
+
+| ファイル | 役割 |
+|---------|------|
+| `Filters/FilterParser.vb` | フィルタ文字列を `DataTable.RowFilter` 式に変換するパーサー |
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---------|---------|
+| `Forms/TableViewerForm.vb` | `ApplyFilter()` を `FilterParser.Parse()` 呼び出しに差し替え |
+
+---
+
 ## 技術的注意点
 
 | 項目 | 内容 |
