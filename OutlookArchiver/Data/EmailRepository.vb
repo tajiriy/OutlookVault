@@ -239,16 +239,21 @@ SELECT last_insert_rowid();"
         '  Email 取得
         ' ════════════════════════════════════════════════════════════
 
-        ''' <summary>フォルダ指定・ページング付きでメール一覧を取得する（受信日時降順）。</summary>
+        ''' <summary>フォルダ指定でメール一覧を取得する（受信日時降順）。</summary>
+        ''' <param name="folderName">フォルダ名。Nothing の場合はすべて。</param>
+        ''' <param name="pageIndex">ページ番号（0始まり）。pageSize &lt;= 0 の場合は無視。</param>
+        ''' <param name="pageSize">ページサイズ。0 以下の場合は全件取得。</param>
         Public Function GetEmails(Optional folderName As String = Nothing,
                                   Optional pageIndex As Integer = 0,
-                                  Optional pageSize As Integer = 100) As List(Of Models.Email)
+                                  Optional pageSize As Integer = 0) As List(Of Models.Email)
             Dim sb As New StringBuilder("SELECT * FROM emails")
             If Not String.IsNullOrEmpty(folderName) Then
                 sb.Append(" WHERE folder_name = @folder_name")
             End If
             sb.Append(" ORDER BY received_at DESC")
-            sb.AppendFormat(" LIMIT {0} OFFSET {1}", pageSize, pageIndex * pageSize)
+            If pageSize > 0 Then
+                sb.AppendFormat(" LIMIT {0} OFFSET {1}", pageSize, pageIndex * pageSize)
+            End If
 
             Dim result As New List(Of Models.Email)
             Using conn As SQLiteConnection = _dbManager.GetConnection()
