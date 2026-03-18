@@ -235,6 +235,12 @@ ImportService.ImportFolder(folderName)
 - **変更後**: `ImportFolders` 開始時に `GetAllMessageIds()` / `GetAllDeletedMessageIds()` で全IDを `HashSet(Of String)` に一括ロード。以降はメモリ内 `Contains()` で判定
 - 新規取り込み分は即座にキャッシュに追加し、同一セッション内の重複も防止
 
+#### スキップ時の COM 操作削減
+
+- **変更前**: スキップ対象でも `ExtractEmailData()` で全プロパティ（本文・受信者・添付ファイル等）を取得してから重複判定
+- **変更後**: `OutlookService.ExtractMessageId()` で MessageID のみ軽量取得 → 重複判定 → 新規メールのみ `ExtractEmailData()` でフルデータ抽出
+- スキップ時の COM 呼び出しが 15回以上 → 1〜2回に削減され、取り込み済みメールの走査が大幅に高速化
+
 ### 設定画面の追加機能
 
 - **データ初期化**: 設定画面に「データ管理」グループを追加。「データ初期化...」ボタンで DB ファイルと添付ファイルディレクトリを一括削除（確認ダイアログ付き）
