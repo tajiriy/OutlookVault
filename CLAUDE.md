@@ -31,7 +31,7 @@ OutlookArchiver は .NET Framework 4.6.2 / VB.NET の Windows Forms デスクト
 
 ## アーキテクチャ
 
-- ソリューション (`OutlookArchiver.slnx`) に `OutlookArchiver/`（本体）と `OutlookArchiver.Tests/`（テスト）を含む構成
+- ソリューション (`OutlookArchiver.sln`) に `OutlookArchiver/`（本体）と `OutlookArchiver.Tests/`（テスト）を含む構成
 - エントリポイント: `My.MyApplication` → `MainForm`
 - `MainForm.Designer.vb` はデザイナー自動生成ファイル。手動編集しないこと
 
