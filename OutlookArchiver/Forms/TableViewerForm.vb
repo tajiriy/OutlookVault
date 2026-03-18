@@ -88,6 +88,7 @@ Namespace Forms
             dgv.AllowUserToAddRows = False
             dgv.AllowUserToDeleteRows = False
             dgv.AllowUserToOrderColumns = True
+            dgv.AllowUserToResizeColumns = True
             dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None
             dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect
             dgv.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithAutoHeaderText
@@ -142,6 +143,8 @@ Namespace Forms
                 If col.Width > MaxColumnWidth Then
                     col.Width = MaxColumnWidth
                 End If
+                ' ユーザーによるドラッグリサイズを確実に有効化
+                col.Resizable = DataGridViewTriState.True
             Next
         End Sub
 
