@@ -21,7 +21,9 @@ Namespace Controls
         Private _canToggle As Boolean
         Private _highlightQuery As String
         Private _attachImageList As System.Windows.Forms.ImageList
+        Private _attachLargeImageList As System.Windows.Forms.ImageList
         Private _attachContextMenu As System.Windows.Forms.ContextMenuStrip
+        Private _attachToolTip As System.Windows.Forms.ToolTip
 
         ' ════════════════════════════════════════════════════════════
         '  初期化
@@ -36,11 +38,23 @@ Namespace Controls
             lblSubjectCaption.Font = boldFont
             lblToCaption.Font = boldFont
 
-            ' 添付ファイルアイコン用 ImageList
+            ' 添付ファイルアイコン用 ImageList（小: 16×16）
             _attachImageList = New System.Windows.Forms.ImageList()
             _attachImageList.ImageSize = New Size(16, 16)
             _attachImageList.ColorDepth = System.Windows.Forms.ColorDepth.Depth32Bit
-            BuildAttachmentIcons()
+            BuildAttachmentIcons(_attachImageList, 16)
+
+            ' 添付ファイルアイコン用 ImageList（大: 40×40）
+            _attachLargeImageList = New System.Windows.Forms.ImageList()
+            _attachLargeImageList.ImageSize = New Size(40, 40)
+            _attachLargeImageList.ColorDepth = System.Windows.Forms.ColorDepth.Depth32Bit
+            BuildAttachmentIcons(_attachLargeImageList, 40)
+
+            ' ToolTip
+            _attachToolTip = New System.Windows.Forms.ToolTip()
+            _attachToolTip.AutoPopDelay = 10000
+            _attachToolTip.InitialDelay = 300
+            _attachToolTip.ReshowDelay = 200
 
             ' 添付ファイル右クリックメニュー
             _attachContextMenu = New System.Windows.Forms.ContextMenuStrip()
@@ -306,75 +320,139 @@ Namespace Controls
                 ' インライン画像は添付ファイル一覧に表示しない
                 If att.IsInline Then Continue For
 
-                Dim btn As New System.Windows.Forms.Button()
-                btn.Text = "  " & att.FileName
-                btn.Tag = att
-                btn.Height = 26
-                btn.Width = flowAttachments.ClientSize.Width - 10
-                btn.AutoSize = False
-                btn.AutoEllipsis = True
-                btn.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
-                btn.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft
-                btn.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText
-                btn.ImageList = _attachImageList
-                btn.ImageKey = GetIconKey(Path.GetExtension(att.FileName))
-                btn.Padding = New System.Windows.Forms.Padding(2, 0, 2, 0)
-                btn.ContextMenuStrip = _attachContextMenu
-                AddHandler btn.Click, AddressOf AttachmentButton_Click
-                flowAttachments.Controls.Add(btn)
+                ' 各添付ファイルを Panel(80×80) で表示
+                Dim pnl As New System.Windows.Forms.Panel()
+                pnl.Size = New Size(80, 80)
+                pnl.Tag = att
+                pnl.Cursor = System.Windows.Forms.Cursors.Hand
+                pnl.ContextMenuStrip = _attachContextMenu
+
+                ' アイコン (40×40) を中央上部に配置
+                Dim pb As New System.Windows.Forms.PictureBox()
+                pb.Size = New Size(40, 40)
+                pb.Location = New Point(20, 4)
+                pb.SizeMode = System.Windows.Forms.PictureBoxSizeMode.CenterImage
+                Dim iconKey As String = GetIconKey(Path.GetExtension(att.FileName))
+                If _attachLargeImageList.Images.ContainsKey(iconKey) Then
+                    pb.Image = _attachLargeImageList.Images(iconKey)
+                End If
+                pb.Tag = att
+                pb.Cursor = System.Windows.Forms.Cursors.Hand
+                pb.ContextMenuStrip = _attachContextMenu
+
+                ' ファイル名ラベル（省略表示、下部に配置）
+                Dim lbl As New System.Windows.Forms.Label()
+                lbl.Text = att.FileName
+                lbl.Location = New Point(2, 48)
+                lbl.Size = New Size(76, 30)
+                lbl.TextAlign = System.Drawing.ContentAlignment.TopCenter
+                lbl.AutoEllipsis = True
+                lbl.Tag = att
+                lbl.Cursor = System.Windows.Forms.Cursors.Hand
+                lbl.ContextMenuStrip = _attachContextMenu
+                Dim smallFont As New Font(Me.Font.FontFamily, 7.5F, FontStyle.Regular)
+                lbl.Font = smallFont
+
+                ' ToolTip にフルファイル名とサイズを表示
+                Dim tipText As String = att.FileName
+                If att.FileSize > 0 Then
+                    tipText = tipText & " (" & FormatFileSize(att.FileSize) & ")"
+                End If
+                _attachToolTip.SetToolTip(pnl, tipText)
+                _attachToolTip.SetToolTip(pb, tipText)
+                _attachToolTip.SetToolTip(lbl, tipText)
+
+                ' ダブルクリックでファイルを開く（シングルクリックでは開かない）
+                AddHandler pnl.DoubleClick, AddressOf AttachmentPanel_DoubleClick
+                AddHandler pb.DoubleClick, AddressOf AttachmentPanel_DoubleClick
+                AddHandler lbl.DoubleClick, AddressOf AttachmentPanel_DoubleClick
+
+                ' ホバー時のハイライト
+                AddHandler pnl.MouseEnter, AddressOf AttachmentPanel_MouseEnter
+                AddHandler pnl.MouseLeave, AddressOf AttachmentPanel_MouseLeave
+                AddHandler pb.MouseEnter, Sub() pnl.BackColor = System.Drawing.SystemColors.ControlLight
+                AddHandler pb.MouseLeave, Sub() pnl.BackColor = System.Drawing.Color.Transparent
+                AddHandler lbl.MouseEnter, Sub() pnl.BackColor = System.Drawing.SystemColors.ControlLight
+                AddHandler lbl.MouseLeave, Sub() pnl.BackColor = System.Drawing.Color.Transparent
+
+                pnl.Controls.Add(pb)
+                pnl.Controls.Add(lbl)
+                flowAttachments.Controls.Add(pnl)
                 hasVisible = True
             Next
             pnlAttachments.Visible = hasVisible
         End Sub
+
+        ''' <summary>ファイルサイズを読みやすい形式に変換する。</summary>
+        Private Shared Function FormatFileSize(bytes As Long) As String
+            If bytes < 1024L Then
+                Return bytes.ToString() & " B"
+            ElseIf bytes < 1024L * 1024L Then
+                Return (bytes / 1024.0).ToString("F1") & " KB"
+            Else
+                Return (bytes / (1024.0 * 1024.0)).ToString("F1") & " MB"
+            End If
+        End Function
 
         ' ════════════════════════════════════════════════════════════
         '  添付ファイルアイコン
         ' ════════════════════════════════════════════════════════════
 
         ''' <summary>ファイル種類ごとのアイコンを ImageList に登録する。</summary>
-        Private Sub BuildAttachmentIcons()
+        Private Shared Sub BuildAttachmentIcons(imgList As System.Windows.Forms.ImageList, iconSize As Integer)
             ' PDF (赤)
-            _attachImageList.Images.Add("pdf", CreateFileIcon(Color.FromArgb(220, 50, 50), "P"))
+            imgList.Images.Add("pdf", CreateFileIcon(Color.FromArgb(220, 50, 50), "P", iconSize))
             ' Word (青)
-            _attachImageList.Images.Add("doc", CreateFileIcon(Color.FromArgb(40, 90, 180), "W"))
+            imgList.Images.Add("doc", CreateFileIcon(Color.FromArgb(40, 90, 180), "W", iconSize))
             ' Excel (緑)
-            _attachImageList.Images.Add("xls", CreateFileIcon(Color.FromArgb(30, 130, 60), "X"))
+            imgList.Images.Add("xls", CreateFileIcon(Color.FromArgb(30, 130, 60), "X", iconSize))
             ' PowerPoint (オレンジ)
-            _attachImageList.Images.Add("ppt", CreateFileIcon(Color.FromArgb(210, 120, 20), "P"))
+            imgList.Images.Add("ppt", CreateFileIcon(Color.FromArgb(210, 120, 20), "P", iconSize))
             ' 画像 (紫)
-            _attachImageList.Images.Add("img", CreateFileIcon(Color.FromArgb(120, 70, 170), "I"))
+            imgList.Images.Add("img", CreateFileIcon(Color.FromArgb(120, 70, 170), "I", iconSize))
             ' テキスト (グレー)
-            _attachImageList.Images.Add("txt", CreateFileIcon(Color.FromArgb(100, 100, 100), "T"))
+            imgList.Images.Add("txt", CreateFileIcon(Color.FromArgb(100, 100, 100), "T", iconSize))
             ' 圧縮 (黄)
-            _attachImageList.Images.Add("zip", CreateFileIcon(Color.FromArgb(180, 150, 20), "Z"))
+            imgList.Images.Add("zip", CreateFileIcon(Color.FromArgb(180, 150, 20), "Z", iconSize))
             ' その他 (グレー)
-            _attachImageList.Images.Add("other", CreateFileIcon(Color.FromArgb(140, 140, 140), ""))
+            imgList.Images.Add("other", CreateFileIcon(Color.FromArgb(140, 140, 140), "", iconSize))
         End Sub
 
-        ''' <summary>16×16 のファイルアイコンを生成する。</summary>
-        Private Shared Function CreateFileIcon(baseColor As Color, letter As String) As Bitmap
-            Dim bmp As New Bitmap(16, 16)
+        ''' <summary>指定サイズのファイルアイコンを生成する。</summary>
+        Private Shared Function CreateFileIcon(baseColor As Color, letter As String, iconSize As Integer) As Bitmap
+            Dim bmp As New Bitmap(iconSize, iconSize)
             Using g As Graphics = Graphics.FromImage(bmp)
                 g.SmoothingMode = Drawing2D.SmoothingMode.AntiAlias
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias
 
                 ' 角丸矩形（ファイル形状）
+                Dim margin As Integer = CInt(Math.Max(1, iconSize * 0.06))
+                Dim bodyW As Integer = iconSize - margin * 2
+                Dim bodyH As Integer = iconSize - margin * 2
                 Using brush As New SolidBrush(baseColor)
-                    g.FillRectangle(brush, 1, 1, 14, 14)
+                    g.FillRectangle(brush, margin, margin, bodyW, bodyH)
                 End Using
                 ' 折り目（右上三角）
-                Dim pts() As Point = {New Point(10, 1), New Point(15, 6), New Point(15, 1)}
+                Dim foldSize As Integer = CInt(iconSize * 0.3)
+                Dim foldX As Integer = iconSize - margin - foldSize
+                Dim pts() As Point = {
+                    New Point(foldX, margin),
+                    New Point(iconSize - margin, margin + foldSize),
+                    New Point(iconSize - margin, margin)
+                }
                 Using brush As New SolidBrush(Color.FromArgb(60, Color.White))
                     g.FillPolygon(brush, pts)
                 End Using
 
                 ' 中央の文字
                 If letter.Length > 0 Then
-                    Using fnt As New Font("Segoe UI", 7.5F, FontStyle.Bold)
+                    Dim fontSize As Single = CSng(iconSize * 0.45)
+                    Using fnt As New Font("Segoe UI", fontSize, FontStyle.Bold)
                         Using sf As New StringFormat()
                             sf.Alignment = StringAlignment.Center
                             sf.LineAlignment = StringAlignment.Center
-                            g.DrawString(letter, fnt, Brushes.White, New RectangleF(0, 1, 16, 15), sf)
+                            g.DrawString(letter, fnt, Brushes.White,
+                                         New RectangleF(0, CSng(margin), CSng(iconSize), CSng(bodyH)), sf)
                         End Using
                     End Using
                 End If
@@ -410,18 +488,17 @@ Namespace Controls
         ' ════════════════════════════════════════════════════════════
 
         Private Sub AttachmentSaveAs_Click(sender As Object, e As EventArgs)
-            ' コンテキストメニューの親ボタンから Attachment を取得
+            ' コンテキストメニューの親コントロールから Attachment を取得
             Dim menuItem As System.Windows.Forms.ToolStripMenuItem =
                 TryCast(sender, System.Windows.Forms.ToolStripMenuItem)
             If menuItem Is Nothing Then Return
             Dim cms As System.Windows.Forms.ContextMenuStrip =
                 TryCast(menuItem.Owner, System.Windows.Forms.ContextMenuStrip)
             If cms Is Nothing Then Return
-            Dim btn As System.Windows.Forms.Button =
-                TryCast(cms.SourceControl, System.Windows.Forms.Button)
-            If btn Is Nothing Then Return
+            Dim sourceCtl As System.Windows.Forms.Control = cms.SourceControl
+            If sourceCtl Is Nothing Then Return
 
-            Dim att As Models.Attachment = TryCast(btn.Tag, Models.Attachment)
+            Dim att As Models.Attachment = TryCast(sourceCtl.Tag, Models.Attachment)
             If att Is Nothing Then Return
 
             If Not File.Exists(att.FilePath) Then
@@ -445,11 +522,11 @@ Namespace Controls
             End Using
         End Sub
 
-        Private Sub AttachmentButton_Click(sender As Object, e As EventArgs)
-            Dim btn As System.Windows.Forms.Button = TryCast(sender, System.Windows.Forms.Button)
-            If btn Is Nothing Then Return
+        Private Sub AttachmentPanel_DoubleClick(sender As Object, e As EventArgs)
+            Dim ctl As System.Windows.Forms.Control = TryCast(sender, System.Windows.Forms.Control)
+            If ctl Is Nothing Then Return
 
-            Dim att As Models.Attachment = TryCast(btn.Tag, Models.Attachment)
+            Dim att As Models.Attachment = TryCast(ctl.Tag, Models.Attachment)
             If att Is Nothing Then Return
 
             If Not File.Exists(att.FilePath) Then
@@ -472,6 +549,16 @@ Namespace Controls
                         "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error)
                 End Try
             End If
+        End Sub
+
+        Private Sub AttachmentPanel_MouseEnter(sender As Object, e As EventArgs)
+            Dim pnl As System.Windows.Forms.Panel = TryCast(sender, System.Windows.Forms.Panel)
+            If pnl IsNot Nothing Then pnl.BackColor = System.Drawing.SystemColors.ControlLight
+        End Sub
+
+        Private Sub AttachmentPanel_MouseLeave(sender As Object, e As EventArgs)
+            Dim pnl As System.Windows.Forms.Panel = TryCast(sender, System.Windows.Forms.Panel)
+            If pnl IsNot Nothing Then pnl.BackColor = System.Drawing.Color.Transparent
         End Sub
 
         Private Sub ShowImagePreview(filePath As String, fileName As String)
