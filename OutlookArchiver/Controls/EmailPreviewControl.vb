@@ -210,10 +210,38 @@ Namespace Controls
             End If
         End Function
 
-        ''' <summary>JSON 配列文字列（["a@b.com","c@d.com"]）をカンマ区切りテキストに変換する。</summary>
+        ''' <summary>
+        ''' 受信者 JSON 配列文字列を「名前 &lt;メール&gt;」形式のカンマ区切りテキストに変換する。
+        ''' 対応形式: [{"name":"太郎","email":"tarou@example.com"}, ...] または ["a@b.com", ...]
+        ''' </summary>
         Private Function FormatRecipientsJson(json As String) As String
             If String.IsNullOrEmpty(json) Then Return String.Empty
             Dim s As String = json.Trim()
+            If Not s.StartsWith("[") Then Return s
+
+            ' {"name":"...","email":"..."} オブジェクト形式をパース
+            Dim objPattern As New Regex(
+                "\{\s*""name""\s*:\s*""(?<name>[^""]*)""\s*,\s*""email""\s*:\s*""(?<email>[^""]*)""\s*\}",
+                RegexOptions.IgnoreCase)
+            Dim matches As MatchCollection = objPattern.Matches(s)
+
+            If matches.Count > 0 Then
+                Dim parts As New List(Of String)()
+                For Each m As Match In matches
+                    Dim recipName As String = m.Groups("name").Value.Trim()
+                    Dim recipEmail As String = m.Groups("email").Value.Trim()
+                    If recipName.Length > 0 AndAlso recipEmail.Length > 0 Then
+                        parts.Add(recipName & " <" & recipEmail & ">")
+                    ElseIf recipEmail.Length > 0 Then
+                        parts.Add(recipEmail)
+                    ElseIf recipName.Length > 0 Then
+                        parts.Add(recipName)
+                    End If
+                Next
+                Return String.Join(", ", parts.ToArray())
+            End If
+
+            ' フォールバック: 単純な文字列配列 ["a@b.com","c@d.com"]
             If s.StartsWith("[") Then s = s.Substring(1)
             If s.EndsWith("]") Then s = s.Substring(0, s.Length - 1)
             Return s.Replace("""", String.Empty).Trim()
@@ -236,7 +264,10 @@ Namespace Controls
                 btn.Text = att.FileName
                 btn.Tag = att
                 btn.Height = 26
-                btn.AutoSize = True
+                btn.Width = flowAttachments.ClientSize.Width - 10
+                btn.AutoSize = False
+                btn.AutoEllipsis = True
+                btn.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
                 btn.Padding = New System.Windows.Forms.Padding(4, 0, 4, 0)
                 AddHandler btn.Click, AddressOf AttachmentButton_Click
                 flowAttachments.Controls.Add(btn)

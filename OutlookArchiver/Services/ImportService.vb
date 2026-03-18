@@ -253,6 +253,18 @@ Namespace Services
                     importResult.Errors.Add(errMsg)
                     importResult.ErrorCount += 1
                 Next
+
+                ' インライン画像のみで実質的な添付がない場合はフラグを修正
+                Dim hasRealAttachment As Boolean = False
+                For Each att As Models.Attachment In attachments
+                    If Not att.IsInline Then
+                        hasRealAttachment = True
+                        Exit For
+                    End If
+                Next
+                If Not hasRealAttachment Then
+                    _repo.UpdateHasAttachments(emailId, False)
+                End If
             End If
 
             Return True

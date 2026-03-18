@@ -144,9 +144,9 @@ Namespace Controls
             Me.btnToggleView.Height = 23
             Me.btnToggleView.Enabled = False
 
-            ' ── pnlAttachments (Dock=Bottom, 58px) ─────────────────────
-            Me.pnlAttachments.Dock = System.Windows.Forms.DockStyle.Bottom
-            Me.pnlAttachments.Height = 58
+            ' ── pnlAttachments (Dock=Right, 180px) ─────────────────────
+            Me.pnlAttachments.Dock = System.Windows.Forms.DockStyle.Right
+            Me.pnlAttachments.Width = 180
             Me.pnlAttachments.Name = "pnlAttachments"
             Me.pnlAttachments.Padding = New System.Windows.Forms.Padding(4)
             Me.pnlAttachments.Visible = False
@@ -154,17 +154,18 @@ Namespace Controls
             Me.pnlAttachments.Controls.Add(Me.lblAttachTitle)
 
             ' lblAttachTitle
-            Me.lblAttachTitle.Dock = System.Windows.Forms.DockStyle.Left
+            Me.lblAttachTitle.Dock = System.Windows.Forms.DockStyle.Top
             Me.lblAttachTitle.Name = "lblAttachTitle"
-            Me.lblAttachTitle.Text = "添付:"
-            Me.lblAttachTitle.Width = 44
-            Me.lblAttachTitle.TextAlign = System.Drawing.ContentAlignment.MiddleRight
+            Me.lblAttachTitle.Text = "添付ファイル:"
+            Me.lblAttachTitle.Height = 22
+            Me.lblAttachTitle.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
 
             ' flowAttachments
             Me.flowAttachments.Dock = System.Windows.Forms.DockStyle.Fill
             Me.flowAttachments.Name = "flowAttachments"
             Me.flowAttachments.AutoScroll = True
-            Me.flowAttachments.WrapContents = False
+            Me.flowAttachments.WrapContents = True
+            Me.flowAttachments.FlowDirection = System.Windows.Forms.FlowDirection.TopDown
 
             ' ── pnlBody (Dock=Fill) ─────────────────────────────────────
             Me.pnlBody.Dock = System.Windows.Forms.DockStyle.Fill

@@ -214,6 +214,27 @@ SELECT last_insert_rowid();"
             Return Convert.ToInt32(cmd.ExecuteScalar())
         End Function
 
+        ''' <summary>指定メールの has_attachments フラグを更新する。</summary>
+        Public Sub UpdateHasAttachments(emailId As Integer, hasAttachments As Boolean)
+            Dim sql As String = "UPDATE emails SET has_attachments = @val WHERE id = @id"
+            If _bulkConn IsNot Nothing Then
+                Using cmd As New SQLiteCommand(sql, _bulkConn)
+                    cmd.Transaction = _bulkTx
+                    cmd.Parameters.AddWithValue("@val", If(hasAttachments, 1, 0))
+                    cmd.Parameters.AddWithValue("@id", emailId)
+                    cmd.ExecuteNonQuery()
+                End Using
+            Else
+                Using conn As SQLiteConnection = _dbManager.GetConnection()
+                    Using cmd As New SQLiteCommand(sql, conn)
+                        cmd.Parameters.AddWithValue("@val", If(hasAttachments, 1, 0))
+                        cmd.Parameters.AddWithValue("@id", emailId)
+                        cmd.ExecuteNonQuery()
+                    End Using
+                End Using
+            End If
+        End Sub
+
         ' ════════════════════════════════════════════════════════════
         '  FTS トリガー制御（取り込み高速化）
         ' ════════════════════════════════════════════════════════════
