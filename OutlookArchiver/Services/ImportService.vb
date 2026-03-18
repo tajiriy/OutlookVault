@@ -23,6 +23,7 @@ Namespace Services
         Public Property ImportedCount As Integer
         Public Property SkippedCount As Integer
         Public Property ErrorCount As Integer
+        Public Property TotalOutlookCount As Integer
         Public Property Errors As List(Of String)
 
         Public Sub New()
@@ -92,6 +93,7 @@ Namespace Services
 
             Dim items As Outlook.Items = folder.Items
             Dim totalCount As Integer = items.Count
+            result.TotalOutlookCount += totalCount
             Dim attachBaseDir As String = _settings.AttachmentDirectory
 
             ' 添付ファイル保存先ディレクトリを作成
@@ -206,6 +208,7 @@ Namespace Services
                 total.ImportedCount += r.ImportedCount
                 total.SkippedCount += r.SkippedCount
                 total.ErrorCount += r.ErrorCount
+                total.TotalOutlookCount += r.TotalOutlookCount
                 total.Errors.AddRange(r.Errors)
             Next
 

@@ -18,6 +18,7 @@ Public Class MainForm
     Private _emailCache As List(Of Models.Email)
     Private _currentFolder As String      ' Nothing = すべて
     Private _isImporting As Boolean
+    Private _lastOutlookTotalCount As Integer = -1  ' -1 = 未取得
     Private _autoImportEnabled As Boolean
     Private _searchQuery As String        ' 現在の検索クエリ（Nothing = 検索なし）
     Private _updatingFolderCounts As Boolean ' フォルダ件数更新中のイベント抑制フラグ
@@ -297,6 +298,7 @@ Public Class MainForm
             staThread.Start()
 
             Dim result As Services.ImportResult = Await tcs.Task
+            _lastOutlookTotalCount = result.TotalOutlookCount
 
             Dim msg As String = String.Format(
                 "取り込み完了{0}取り込み: {1}件 / スキップ: {2}件 / エラー: {3}件",
@@ -556,7 +558,11 @@ Public Class MainForm
     Private Sub UpdateStatusBar()
         Try
             Dim count As Integer = _repo.GetTotalCount()
-            lblStatusCount.Text = String.Format("総数 {0}件", count)
+            If _lastOutlookTotalCount > 0 AndAlso count < _lastOutlookTotalCount Then
+                lblStatusCount.Text = String.Format("総数 {0}/{1}件", count, _lastOutlookTotalCount)
+            Else
+                lblStatusCount.Text = String.Format("総数 {0}件", count)
+            End If
         Catch
             lblStatusCount.Text = "総数 -件"
         End Try
