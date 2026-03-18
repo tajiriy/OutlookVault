@@ -191,9 +191,9 @@ Namespace Forms
             Dim total As Integer = _dataTable.Rows.Count
             Dim filtered As Integer = _dataTable.DefaultView.Count
             If total = filtered Then
-                lblRowCount.Text = String.Format("{0} 件", total)
+                lblRowCount.Text = String.Format("{0:N0} 件", total)
             Else
-                lblRowCount.Text = String.Format("{0} / {1} 件", filtered, total)
+                lblRowCount.Text = String.Format("{0:N0} / {1:N0} 件", filtered, total)
             End If
             ' 右上に配置
             lblRowCount.Location = New Drawing.Point(

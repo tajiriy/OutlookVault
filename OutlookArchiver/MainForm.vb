@@ -153,14 +153,14 @@ Public Class MainForm
         treeViewFolders.Nodes.Clear()
 
         Dim totalCount As Integer = _repo.GetTotalCount()
-        Dim nodeAll As New TreeNode(String.Format("すべて ({0})", totalCount))
+        Dim nodeAll As New TreeNode(String.Format("すべて ({0:N0})", totalCount))
         nodeAll.Tag = Nothing
         treeViewFolders.Nodes.Add(nodeAll)
 
         Dim folders As List(Of String) = _repo.GetFolderNames()
         For Each folder As String In folders
             Dim count As Integer = _repo.GetTotalCount(folder)
-            Dim node As New TreeNode(String.Format("{0} ({1})", folder, count))
+            Dim node As New TreeNode(String.Format("{0} ({1:N0})", folder, count))
             node.Tag = folder
             treeViewFolders.Nodes.Add(node)
         Next
@@ -394,7 +394,7 @@ Public Class MainForm
             ' プレビューをクリア（新しい検索結果を選択するまで）
             emailPreview.ClearPreview()
             conversationView.ClearView()
-            lblStatusCount.Text = String.Format("検索結果: {0}件", _emailCache.Count)
+            lblStatusCount.Text = String.Format("検索結果: {0:N0}件", _emailCache.Count)
         Catch ex As Exception
             MessageBox.Show("検索エラー:" & vbCrLf & ex.Message, "エラー",
                 MessageBoxButtons.OK, MessageBoxIcon.Error)
@@ -519,14 +519,14 @@ Public Class MainForm
 
         Try
             Dim totalCount As Integer = _repo.GetTotalCount()
-            Dim nodeAll As New TreeNode(String.Format("すべて ({0})", totalCount))
+            Dim nodeAll As New TreeNode(String.Format("すべて ({0:N0})", totalCount))
             nodeAll.Tag = Nothing
             treeViewFolders.Nodes.Add(nodeAll)
 
             Dim folders As List(Of String) = _repo.GetFolderNames()
             For Each folder As String In folders
                 Dim count As Integer = _repo.GetTotalCount(folder)
-                Dim node As New TreeNode(String.Format("{0} ({1})", folder, count))
+                Dim node As New TreeNode(String.Format("{0} ({1:N0})", folder, count))
                 node.Tag = folder
                 treeViewFolders.Nodes.Add(node)
             Next
@@ -559,9 +559,9 @@ Public Class MainForm
         Try
             Dim count As Integer = _repo.GetTotalCount()
             If _lastOutlookTotalCount > 0 AndAlso count < _lastOutlookTotalCount Then
-                lblStatusCount.Text = String.Format("総数 {0}/{1}件", count, _lastOutlookTotalCount)
+                lblStatusCount.Text = String.Format("総数 {0:N0}/{1:N0}件", count, _lastOutlookTotalCount)
             Else
-                lblStatusCount.Text = String.Format("総数 {0}件", count)
+                lblStatusCount.Text = String.Format("総数 {0:N0}件", count)
             End If
         Catch
             lblStatusCount.Text = "総数 -件"
