@@ -4,9 +4,9 @@
 
 | ステータス | 件数 |
 |-----------|------|
-| open      | 3    |
+| open      | 2    |
 | in-progress | 0  |
-| done      | 13   |
+| done      | 14   |
 | wontfix   | 0    |
 
 ## カテゴリ
@@ -128,17 +128,17 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | Medium |
 | カテゴリ | winforms |
 | ソース | review |
 | 対象ファイル | OutlookVault/Controls/EmailPreviewControl.vb |
 | 登録日 | 2026-03-19 |
-| 修正日 | - |
+| 修正日 | 2026-03-19 |
 
 **内容:** `LoadAttachments` で `flowAttachments.Controls.Clear()` はコントロール削除するが `AddHandler` のアンサブスクライブをしない。`Font` オブジェクト (`smallFont`) を毎回生成し `Dispose` が呼ばれない。
 
-**対策:** `smallFont` をフィールドに昇格してインスタンス共有する。`Controls.Clear()` 前に各コントロールの `Dispose` を呼ぶか、`RemoveHandler` を実施する。
+**対策:** `CleanupAttachmentControls` メソッドを追加し、`Controls.Clear()` 前に全 AddHandler の RemoveHandler + pnl.Dispose() を実施。`smallFont` を `_attachSmallFont` フィールドに昇格してインスタンス共有（遅延初期化）。`ClearPreview` でもクリーンアップを呼ぶ。
 
 **メモ:** EmailPreviewControl.vb 行 301〜374、行 344
 
@@ -357,3 +357,4 @@
 | 2026-03-19 | R-011 | done: Enum EmailListColumn でソート列のマジックナンバーを排除 |
 | 2026-03-19 | R-012, R-013 | done: StringComparison.OrdinalIgnoreCase 使用、Regex を Shared Compiled に昇格 |
 | 2026-03-19 | R-014, R-016 | done: JSON エスケープに制御文字追加、レジストリ Catch を例外型限定+Logger.Warn |
+| 2026-03-19 | R-006 | done: 動的コントロールの RemoveHandler+Dispose、Font フィールド昇格 |
