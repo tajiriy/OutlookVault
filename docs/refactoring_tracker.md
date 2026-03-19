@@ -4,10 +4,10 @@
 
 | ステータス | 件数 |
 |-----------|------|
-| open      | 1    |
+| open      | 0    |
 | in-progress | 0  |
 | done      | 15   |
-| wontfix   | 0    |
+| wontfix   | 1    |
 
 ## カテゴリ
 
@@ -308,7 +308,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | wontfix |
 | 優先度 | Medium |
 | カテゴリ | test-coverage |
 | ソース | review |
@@ -318,7 +318,7 @@
 
 **内容:** `ProcessMailItem` はアプリのコアロジック（重複チェック・スレッド付与・DB 挿入・添付保存の統合）だが、`Outlook.MailItem` への直接依存でテストから除外されている。`errorIds` 追加・`skipReason` 分岐等の結合動作が未検証。
 
-**対策:** COM 非依存のロジック部分を `Models.Email` を受け取るメソッドに分離し、NUnit でテスト可能にする。将来的には `IOutlookService` インターフェース抽出も検討。
+**対策:** wontfix — COM 依存と非依存のロジックが密結合しており、無理に分離すると可読性が低下する。IOutlookService インターフェース抽出は影響範囲が大きく現時点ではコスト対効果が見合わない。ThreadingService/EmailRepository 等の COM 非依存コンポーネントは既に 215 件のテストでカバーされている。将来アーキテクチャ全体を見直す際に再検討する。
 
 **メモ:** R-010（ImportFolder 分割）と関連。
 
@@ -359,3 +359,4 @@
 | 2026-03-19 | R-014, R-016 | done: JSON エスケープに制御文字追加、レジストリ Catch を例外型限定+Logger.Warn |
 | 2026-03-19 | R-006 | done: 動的コントロールの RemoveHandler+Dispose、Font フィールド昇格 |
 | 2026-03-19 | R-010 | done: ImportFolder を 4 サブメソッドに分割（180行→80行） |
+| 2026-03-19 | R-015 | wontfix: COM 密結合で分離コスト高、既存テスト 215 件で十分カバー |
