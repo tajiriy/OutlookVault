@@ -4,9 +4,9 @@
 
 | ステータス | 件数 |
 |-----------|------|
-| open      | 16   |
+| open      | 13   |
 | in-progress | 0  |
-| done      | 15   |
+| done      | 18   |
 | wontfix   | 1    |
 
 ## カテゴリ
@@ -346,7 +346,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | High |
 | カテゴリ | resource-management |
 | ソース | review |
@@ -356,9 +356,9 @@
 
 **内容:** `FindFolder` で早期 Return パスと Finally ブロックの両方で `stores`/`root` の `Marshal.ReleaseComObject` が呼ばれ、二重解放が発生する。
 
-**対策:** 早期 Return パスの `Marshal.ReleaseComObject(stores)` を削除し Finally に一本化する。
+**対策:** 早期 Return を Exit For + result 変数に変更し、stores/root/store の解放を Finally に一本化。root = Nothing で二重解放を防止。
 
-**メモ:** R-001 対応時に導入されたエッジケース。
+**メモ:** R-001 対応時に導入されたエッジケース。修正日: 2026-03-19
 
 ---
 
@@ -366,7 +366,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | High |
 | カテゴリ | resource-management |
 | ソース | review |
@@ -376,9 +376,9 @@
 
 **内容:** 差分スキャン時に `folder.Items` で取得した中間 Items COM オブジェクトが `Restrict` 後に解放されない。呼び出し元 `ImportFolder` でも返された `items` に対して `Marshal.ReleaseComObject` を呼んでいない。
 
-**対策:** 差分スキャン時は `Dim tmpItems = folder.Items` → `items = tmpItems.Restrict(filter)` → `ReleaseComObject(tmpItems)`。`ImportFolder` の Finally でも `items` を解放。
+**対策:** 差分スキャン時に `Dim allItems = folder.Items` → `items = allItems.Restrict(filter)` → `ReleaseComObject(allItems)` で中間 Items を解放。`ImportFolder` の Finally に `If items IsNot Nothing Then Marshal.ReleaseComObject(items)` を追加。
 
-**メモ:** R-010 でメソッド抽出した際に漏れた箇所。
+**メモ:** R-010 でメソッド抽出した際に漏れた箇所。修正日: 2026-03-19
 
 ---
 
@@ -386,7 +386,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | High |
 | カテゴリ | resource-management |
 | ソース | review |
@@ -396,9 +396,9 @@
 
 **内容:** 中間コミット後の再 `BeginBulk()` が例外を投げた場合、`RollbackBulk` が呼ばれないケースがある。
 
-**対策:** 中間コミット後の `BeginBulk` を Try/Catch で囲むか、`CommitBulk` + `BeginBulk` をアトミックなヘルパーメソッドに統合する。
+**対策:** 中間コミット後の `BeginBulk` を Try/Catch で囲み、失敗時に Logger.Error で記録してから Throw。外側の Catch で RollbackBulk が呼ばれる。
 
-**メモ:** なし
+**メモ:** 修正日: 2026-03-19
 
 ---
 
@@ -681,3 +681,4 @@
 | 2026-03-19 | R-010 | done: ImportFolder を 4 サブメソッドに分割（180行→80行） |
 | 2026-03-19 | R-015 | wontfix: COM 密結合で分離コスト高、既存テスト 215 件で十分カバー |
 | 2026-03-19 | R-017〜R-032 | 2回目の code-reviewer レビューから 16 件を一括登録 |
+| 2026-03-19 | R-017, R-018, R-019 | done: COM 二重解放修正、Items 解放漏れ修正、BeginBulk 例外処理追加 |
