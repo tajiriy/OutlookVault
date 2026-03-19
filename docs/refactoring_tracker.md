@@ -4,7 +4,7 @@
 
 | ステータス | 件数 |
 |-----------|------|
-| open      | 0    |
+| open      | 8    |
 | in-progress | 0  |
 | done      | 25   |
 | wontfix   | 4    |
@@ -664,6 +664,166 @@
 
 ---
 
+### R-033: ImportFolder ループ内の rawItem/mailItem COM 解放漏れ
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | Critical |
+| カテゴリ | resource-management |
+| ソース | review |
+| 対象ファイル | OutlookVault/Services/ImportService.vb |
+| 登録日 | 2026-03-19 |
+| 修正日 | - |
+
+**内容:** メインループで rawItem を取得後、MailItem 以外は `Continue Do` でスキップされるが rawItem が解放されない。MailItem の場合も mailItem の COM 解放がない。大量取り込み時にメモリリーク。
+
+**対策:** rawItem を `Try...Finally Marshal.ReleaseComObject(rawItem)` で囲む。
+
+**メモ:** BUG-001
+
+---
+
+### R-034: ShowImagePreview で Image/Form の Dispose 漏れ
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | Medium |
+| カテゴリ | resource-management |
+| ソース | review |
+| 対象ファイル | OutlookVault/Controls/EmailPreviewControl.vb |
+| 登録日 | 2026-03-19 |
+| 修正日 | - |
+
+**内容:** ShowDialog 中に例外が発生した場合 img.Dispose() と frm.Dispose() が呼ばれない。
+
+**対策:** Try...Finally で img と frm の Dispose を保証。
+
+**メモ:** BUG-002
+
+---
+
+### R-035: SyncDeletions で folder.Items を2回取得（冗長）
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | Medium |
+| カテゴリ | resource-management |
+| ソース | review |
+| 対象ファイル | OutlookVault/Services/ImportService.vb |
+| 登録日 | 2026-03-19 |
+| 修正日 | - |
+
+**内容:** 進捗用に folder.Items.Count を取得後、GetFolderMessageIds 内でも folder.Items が取得される。
+
+**対策:** GetFolderMessageIds に totalCount を ByRef で返すか設計整理。
+
+**メモ:** BUG-003
+
+---
+
+### R-036: DateTime.Parse が不正な日付で FormatException
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | Medium |
+| カテゴリ | error-handling |
+| ソース | review |
+| 対象ファイル | OutlookVault/Data/EmailRepository.vb |
+| 登録日 | 2026-03-19 |
+| 修正日 | - |
+
+**内容:** MapEmail/MapEmailSummary で DateTime.Parse が不正な日付文字列で例外。メール一覧が表示されなくなる。
+
+**対策:** DateTime.TryParse に変更し、失敗時は DateTime.MinValue + Logger.Warn。
+
+**メモ:** BUG-004
+
+---
+
+### R-037: QuoteStripperService の Regex が都度コンパイル
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | Medium |
+| カテゴリ | performance |
+| ソース | review |
+| 対象ファイル | OutlookVault/Services/QuoteStripperService.vb |
+| 登録日 | 2026-03-19 |
+| 修正日 | - |
+
+**内容:** StripQuotesFromHtml 内の4つの Regex.Replace が静的呼び出しで毎回コンパイル。
+
+**対策:** Shared ReadOnly Compiled パターンに昇格（R-021 と同パターン）。
+
+**メモ:** BUG-005
+
+---
+
+### R-038: SyncDeletions/ImportFolder で FindFolder の結果が COM 解放されない
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | Medium |
+| カテゴリ | resource-management |
+| ソース | review |
+| 対象ファイル | OutlookVault/Services/ImportService.vb |
+| 登録日 | 2026-03-19 |
+| 修正日 | - |
+
+**内容:** FindFolder で取得した folder が SyncDeletions(行374) と ImportFolder(行125) で Marshal.ReleaseComObject されていない。
+
+**対策:** Try...Finally で folder を解放。
+
+**メモ:** BUG-006 の folder 解放分
+
+---
+
+### R-039: ParseHeaderField の ToLower() を StringComparison に変更
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | Low |
+| カテゴリ | performance |
+| ソース | review |
+| 対象ファイル | OutlookVault/Services/OutlookService.vb |
+| 登録日 | 2026-03-19 |
+| 修正日 | - |
+
+**内容:** line.ToLower() を毎行生成。StringComparison.OrdinalIgnoreCase に変更可能。
+
+**対策:** StartsWith + StringComparison に変更、searchFor の ToLower() 除去。
+
+**メモ:** BUG-007
+
+---
+
+### R-040: DeleteEmailsByIds の添付パス収集が N+1 クエリ
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | Medium |
+| カテゴリ | performance |
+| ソース | review |
+| 対象ファイル | OutlookVault/Data/EmailRepository.vb |
+| 登録日 | 2026-03-19 |
+| 修正日 | - |
+
+**内容:** 削除件数分の個別 SELECT で添付パスを収集。100件削除で100回 SELECT。
+
+**対策:** IN 句による一括 SELECT に変更。
+
+**メモ:** BUG-008
+
+---
+
 ## 変更履歴
 
 | 日付 | 項目 | 変更内容 |
@@ -695,3 +855,4 @@
 | 2026-03-19 | R-030 | wontfix: 終了処理のみで頻度低く、async化の影響範囲が大きい |
 | 2026-03-19 | R-031 | wontfix: 開発者向けテーブルビューアで万件単位の利用は想定外 |
 | 2026-03-19 | R-024,R-026,R-028〜R-031 | ステータスを wontfix/deferred/invalid に再分類 |
+| 2026-03-19 | R-033〜R-040 | 3回目の code-reviewer レビューから 8 件を一括登録 |
