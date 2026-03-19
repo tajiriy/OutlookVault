@@ -46,9 +46,9 @@ Namespace Services
             WriteLog("ERROR", message)
         End Sub
 
-        ''' <summary>例外付きのエラーレベルのログを出力する。</summary>
+        ''' <summary>例外付きのエラーレベルのログを出力する。スタックトレースも記録する。</summary>
         Public Shared Sub [Error](message As String, ex As Exception)
-            WriteLog("ERROR", message & " - " & ex.GetType().Name & ": " & ex.Message)
+            WriteLog("ERROR", message & " - " & ex.ToString())
         End Sub
 
         ''' <summary>現在の日付に対応するログファイルのフルパスを返す。</summary>

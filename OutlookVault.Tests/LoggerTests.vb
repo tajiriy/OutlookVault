@@ -66,6 +66,8 @@ Public Class LoggerTests
         Assert.That(content, Does.Contain("処理失敗"))
         Assert.That(content, Does.Contain("InvalidOperationException"))
         Assert.That(content, Does.Contain("テスト例外"))
+        ' スタックトレースが含まれていること
+        Assert.That(content, Does.Contain("ErrorWithException_IncludesExceptionInfo"))
     End Sub
 
     <Test>
