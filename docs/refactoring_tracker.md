@@ -4,9 +4,9 @@
 
 | ステータス | 件数 |
 |-----------|------|
-| open      | 4    |
+| open      | 3    |
 | in-progress | 0  |
-| done      | 29   |
+| done      | 30   |
 | wontfix   | 4    |
 | deferred  | 2    |
 | invalid   | 1    |
@@ -728,7 +728,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | Medium |
 | カテゴリ | error-handling |
 | ソース | review |
@@ -738,9 +738,9 @@
 
 **内容:** MapEmail/MapEmailSummary で DateTime.Parse が不正な日付文字列で例外。メール一覧が表示されなくなる。
 
-**対策:** DateTime.TryParse に変更し、失敗時は DateTime.MinValue + Logger.Warn。
+**対策:** MapEmailSummary/MapEmail の received_at と sent_at で DateTime.TryParse に変更。パース失敗時は MinValue + Services.Logger.Warn でログ出力。
 
-**メモ:** BUG-004
+**メモ:** BUG-004。修正日: 2026-03-19
 
 ---
 
@@ -859,3 +859,4 @@
 | 2026-03-19 | R-033 | done: ループ内 rawItem を Try...Finally ReleaseComObject で解放 |
 | 2026-03-19 | R-037, R-039 | done: worktree 並列実行で Regex Compiled 化と ToLower 除去を同時対応 |
 | 2026-03-19 | R-034 | done: ShowImagePreview の frm/img を Try...Finally Dispose で保証 |
+| 2026-03-19 | R-036 | done: DateTime.Parse を TryParse に変更、パース失敗時 Logger.Warn |
