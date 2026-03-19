@@ -325,6 +325,59 @@ Namespace Config
             End Set
         End Property
 
+        ' ── フォルダ別メール一覧表示設定 ─────────────────────────
+
+        ''' <summary>フォルダ別の列設定を保存する。</summary>
+        ''' <param name="folderKey">フォルダ識別キー（フォルダ名 or "__ALL__" or "__TRASH__"）</param>
+        ''' <param name="widths">列幅（カンマ区切り）</param>
+        ''' <param name="order">列順（カンマ区切り）</param>
+        ''' <param name="sortColumn">ソート列インデックス</param>
+        ''' <param name="sortAscending">ソート昇順か</param>
+        Public Sub SaveFolderColumnSettings(folderKey As String, widths As String, order As String, sortColumn As Integer, sortAscending As Boolean)
+            Dim safeKey As String = SanitizeFolderKey(folderKey)
+            SaveSetting("FolderCol_" & safeKey & "_Widths", widths)
+            SaveSetting("FolderCol_" & safeKey & "_Order", order)
+            SaveSetting("FolderCol_" & safeKey & "_SortCol", sortColumn.ToString())
+            SaveSetting("FolderCol_" & safeKey & "_SortAsc", sortAscending.ToString())
+        End Sub
+
+        ''' <summary>フォルダ別の列設定を読み込む。未設定の場合は Nothing を返す。</summary>
+        Public Function LoadFolderColumnWidths(folderKey As String) As String
+            Return ConfigurationManager.AppSettings("FolderCol_" & SanitizeFolderKey(folderKey) & "_Widths")
+        End Function
+
+        ''' <summary>フォルダ別の列順を読み込む。未設定の場合は Nothing を返す。</summary>
+        Public Function LoadFolderColumnOrder(folderKey As String) As String
+            Return ConfigurationManager.AppSettings("FolderCol_" & SanitizeFolderKey(folderKey) & "_Order")
+        End Function
+
+        ''' <summary>フォルダ別のソート列を読み込む。未設定の場合は -1 を返す。</summary>
+        Public Function LoadFolderSortColumn(folderKey As String) As Integer
+            Return GetInt("FolderCol_" & SanitizeFolderKey(folderKey) & "_SortCol", defaultValue:=-1)
+        End Function
+
+        ''' <summary>フォルダ別のソート方向を読み込む。未設定の場合は False を返す。</summary>
+        Public Function LoadFolderSortAscending(folderKey As String) As Boolean
+            Return GetBool("FolderCol_" & SanitizeFolderKey(folderKey) & "_SortAsc", defaultValue:=False)
+        End Function
+
+        ''' <summary>フォルダ別の列設定が存在するか確認する。</summary>
+        Public Function HasFolderColumnSettings(folderKey As String) As Boolean
+            Dim val As String = ConfigurationManager.AppSettings("FolderCol_" & SanitizeFolderKey(folderKey) & "_Widths")
+            Return Not String.IsNullOrEmpty(val)
+        End Function
+
+        ''' <summary>フォルダ名をApp.configキーとして安全な文字列に変換する。</summary>
+        Friend Shared Function SanitizeFolderKey(folderKey As String) As String
+            If String.IsNullOrEmpty(folderKey) Then Return "__ALL__"
+            ' App.config キーで使用不可な文字をアンダースコアに置換
+            Dim sanitized As String = folderKey
+            For Each c As Char In New Char() {"."c, " "c, "\"c, "/"c, ":"c, "<"c, ">"c, """"c, "|"c, "?"c, "*"c}
+                sanitized = sanitized.Replace(c, "_"c)
+            Next
+            Return sanitized
+        End Function
+
         ' ── ヘルパー ──────────────────────────────────────────────
 
         Private Function GetBool(key As String, defaultValue As Boolean) As Boolean

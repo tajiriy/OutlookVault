@@ -139,14 +139,8 @@ Public Class MainForm
         _sortColumn = CType(_settings.EmailListSortColumn, EmailListColumn)
         _sortAscending = _settings.EmailListSortAscending
 
-        ' ── 列幅を復元 ────────────────────────────────────────────
-        RestoreColumnWidths()
-
-        ' ── 列順を復元 ────────────────────────────────────────────
-        RestoreColumnOrder()
-
-        ' ── ソートインジケーターを更新 ───────────────────────────
-        UpdateColumnSortIndicator()
+        ' ── フォルダ別列設定を復元（なければグローバル設定を使用） ──
+        RestoreColumnSettingsForFolder(GetCurrentFolderKey())
     End Sub
 
     ''' <summary>16×16 のペーパークリップアイコンを GDI+ で描画して返す。</summary>
@@ -227,6 +221,9 @@ Public Class MainForm
         If e.Node Is Nothing Then Return
         If _updatingFolderCounts Then Return
 
+        ' 切り替え前のフォルダの列設定を保存
+        SaveColumnSettingsForFolder(GetCurrentFolderKey())
+
         Dim tag As String = TryCast(e.Node.Tag, String)
         _isTrashView = String.Equals(tag, TrashFolderTag, StringComparison.Ordinal)
 
@@ -240,6 +237,10 @@ Public Class MainForm
         txtSearch.Text = String.Empty
         _searchQuery = Nothing
         UpdateContextMenuForView()
+
+        ' 切り替え後のフォルダの列設定を復元
+        RestoreColumnSettingsForFolder(GetCurrentFolderKey())
+
         Await LoadEmailsAsync(_currentFolder)
     End Sub
 
@@ -1315,7 +1316,11 @@ Public Class MainForm
 
     ''' <summary>AppSettings から列幅を復元する。</summary>
     Private Sub RestoreColumnWidths()
-        Dim colWidths As String = _settings.EmailListColumnWidths
+        RestoreColumnWidthsFrom(_settings.EmailListColumnWidths)
+    End Sub
+
+    ''' <summary>カンマ区切りの列幅文字列から列幅を復元する。</summary>
+    Private Sub RestoreColumnWidthsFrom(colWidths As String)
         If String.IsNullOrEmpty(colWidths) Then Return
 
         Dim parts() As String = colWidths.Split(","c)
@@ -1331,7 +1336,11 @@ Public Class MainForm
 
     ''' <summary>AppSettings から列の表示順（DisplayIndex）を復元する。</summary>
     Private Sub RestoreColumnOrder()
-        Dim colOrder As String = _settings.EmailListColumnOrder
+        RestoreColumnOrderFrom(_settings.EmailListColumnOrder)
+    End Sub
+
+    ''' <summary>カンマ区切りの DisplayIndex 文字列から列順を復元する。</summary>
+    Private Sub RestoreColumnOrderFrom(colOrder As String)
         If String.IsNullOrEmpty(colOrder) Then Return
 
         Dim parts() As String = colOrder.Split(","c)
@@ -1364,10 +1373,57 @@ Public Class MainForm
             displayIndices(i) = listViewEmails.Columns(i).DisplayIndex.ToString()
             widths(i) = listViewEmails.Columns(i).Width.ToString()
         Next
-        _settings.EmailListColumnOrder = String.Join(",", displayIndices)
-        _settings.EmailListColumnWidths = String.Join(",", widths)
+        Dim orderStr As String = String.Join(",", displayIndices)
+        Dim widthStr As String = String.Join(",", widths)
+
+        ' グローバル設定に保存（後方互換）
+        _settings.EmailListColumnOrder = orderStr
+        _settings.EmailListColumnWidths = widthStr
         _settings.EmailListSortColumn = CInt(_sortColumn)
         _settings.EmailListSortAscending = _sortAscending
+
+        ' フォルダ別設定にも保存
+        SaveColumnSettingsForFolder(GetCurrentFolderKey())
+    End Sub
+
+    ''' <summary>現在のフォルダを識別するキーを返す。</summary>
+    Private Function GetCurrentFolderKey() As String
+        If _isTrashView Then Return "__TRASH__"
+        Return If(_currentFolder, "__ALL__")
+    End Function
+
+    ''' <summary>現在の列設定を指定フォルダ用に保存する。</summary>
+    Private Sub SaveColumnSettingsForFolder(folderKey As String)
+        Dim count As Integer = listViewEmails.Columns.Count
+        Dim displayIndices(count - 1) As String
+        Dim widths(count - 1) As String
+        For i As Integer = 0 To count - 1
+            displayIndices(i) = listViewEmails.Columns(i).DisplayIndex.ToString()
+            widths(i) = listViewEmails.Columns(i).Width.ToString()
+        Next
+        _settings.SaveFolderColumnSettings(
+            folderKey,
+            String.Join(",", widths),
+            String.Join(",", displayIndices),
+            CInt(_sortColumn),
+            _sortAscending)
+    End Sub
+
+    ''' <summary>指定フォルダの列設定を復元する。フォルダ別設定がなければグローバル設定を使用する。</summary>
+    Private Sub RestoreColumnSettingsForFolder(folderKey As String)
+        If _settings.HasFolderColumnSettings(folderKey) Then
+            RestoreColumnWidthsFrom(_settings.LoadFolderColumnWidths(folderKey))
+            RestoreColumnOrderFrom(_settings.LoadFolderColumnOrder(folderKey))
+            Dim sortCol As Integer = _settings.LoadFolderSortColumn(folderKey)
+            If sortCol >= 0 AndAlso sortCol <= CInt(EmailListColumn.Size) Then
+                _sortColumn = CType(sortCol, EmailListColumn)
+                _sortAscending = _settings.LoadFolderSortAscending(folderKey)
+            End If
+        Else
+            RestoreColumnWidths()
+            RestoreColumnOrder()
+        End If
+        UpdateColumnSortIndicator()
     End Sub
 
     ''' <summary>フォーム終了時に列設定を保存する。取り込み中の場合は確認ダイアログを表示する。</summary>

@@ -64,4 +64,38 @@ Public Class AppSettingsTests
         Assert.That(value, [Is].TypeOf(Of Boolean)())
     End Sub
 
+    ' ── フォルダ別列設定: SanitizeFolderKey テスト ──────────────
+
+    <Test>
+    Public Sub SanitizeFolderKey_NullOrEmpty_ReturnsAllTag()
+        Assert.That(AppSettings.SanitizeFolderKey(Nothing), [Is].EqualTo("__ALL__"))
+        Assert.That(AppSettings.SanitizeFolderKey(""), [Is].EqualTo("__ALL__"))
+    End Sub
+
+    <Test>
+    Public Sub SanitizeFolderKey_NormalFolderName_ReturnsAsIs()
+        Assert.That(AppSettings.SanitizeFolderKey("受信トレイ"), [Is].EqualTo("受信トレイ"))
+        Assert.That(AppSettings.SanitizeFolderKey("__TRASH__"), [Is].EqualTo("__TRASH__"))
+    End Sub
+
+    <Test>
+    Public Sub SanitizeFolderKey_SpecialChars_ReplacedWithUnderscore()
+        Assert.That(AppSettings.SanitizeFolderKey("folder.name"), [Is].EqualTo("folder_name"))
+        Assert.That(AppSettings.SanitizeFolderKey("a/b\c"), [Is].EqualTo("a_b_c"))
+        Assert.That(AppSettings.SanitizeFolderKey("a:b<c>d"), [Is].EqualTo("a_b_c_d"))
+    End Sub
+
+    <Test>
+    Public Sub SanitizeFolderKey_SpacesReplaced()
+        Assert.That(AppSettings.SanitizeFolderKey("my folder"), [Is].EqualTo("my_folder"))
+    End Sub
+
+    ' ── フォルダ別列設定: HasFolderColumnSettings テスト ──────
+
+    <Test>
+    Public Sub HasFolderColumnSettings_NonExistent_ReturnsFalse()
+        ' 存在しないフォルダキーの場合、False を返す
+        Assert.That(_settings.HasFolderColumnSettings("__NON_EXISTENT_FOLDER_KEY_FOR_TEST__"), [Is].False)
+    End Sub
+
 End Class
