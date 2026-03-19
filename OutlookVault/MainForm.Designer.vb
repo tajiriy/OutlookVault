@@ -33,13 +33,14 @@ Partial Class MainForm
         Me.menuItemErrorExclusion = New System.Windows.Forms.ToolStripMenuItem()
 
         Me.menuItemSettings = New System.Windows.Forms.ToolStripMenuItem()
-        Me.menuItemHelp = New System.Windows.Forms.ToolStripMenuItem()
-        Me.menuItemHelpManual = New System.Windows.Forms.ToolStripMenuItem()
+        Me.menuItemDev = New System.Windows.Forms.ToolStripMenuItem()
         Me.menuItemHelpTables = New System.Windows.Forms.ToolStripMenuItem()
         Me.menuItemTableEmails = New System.Windows.Forms.ToolStripMenuItem()
         Me.menuItemTableAttachments = New System.Windows.Forms.ToolStripMenuItem()
         Me.menuItemTableDeletedIds = New System.Windows.Forms.ToolStripMenuItem()
         Me.menuItemTableExchangeCache = New System.Windows.Forms.ToolStripMenuItem()
+        Me.menuItemHelp = New System.Windows.Forms.ToolStripMenuItem()
+        Me.menuItemHelpManual = New System.Windows.Forms.ToolStripMenuItem()
         Me.menuItemHelpAbout = New System.Windows.Forms.ToolStripMenuItem()
         Me.toolStrip = New System.Windows.Forms.ToolStrip()
         Me.btnImportNow = New System.Windows.Forms.ToolStripButton()
@@ -91,7 +92,7 @@ Partial Class MainForm
         '
         'menuStrip
         '
-        Me.menuStrip.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.menuItemFile, Me.menuItemImport, Me.menuItemHelp})
+        Me.menuStrip.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.menuItemFile, Me.menuItemImport, Me.menuItemDev, Me.menuItemHelp})
         Me.menuStrip.Location = New System.Drawing.Point(0, 0)
         Me.menuStrip.Name = "menuStrip"
         Me.menuStrip.Size = New System.Drawing.Size(1397, 24)
@@ -146,19 +147,12 @@ Partial Class MainForm
         Me.menuItemSettings.Size = New System.Drawing.Size(155, 22)
         Me.menuItemSettings.Text = "設定(&T)..."
         '
-        'menuItemHelp
+        'menuItemDev
         '
-        Me.menuItemHelp.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.menuItemHelpManual, Me.menuItemHelpTables, Me.menuItemHelpAbout})
-        Me.menuItemHelp.Name = "menuItemHelp"
-        Me.menuItemHelp.Size = New System.Drawing.Size(65, 20)
-        Me.menuItemHelp.Text = "ヘルプ(&H)"
-        '
-        'menuItemHelpManual
-        '
-        Me.menuItemHelpManual.Name = "menuItemHelpManual"
-        Me.menuItemHelpManual.ShortcutKeys = System.Windows.Forms.Keys.F1
-        Me.menuItemHelpManual.Size = New System.Drawing.Size(193, 22)
-        Me.menuItemHelpManual.Text = "ユーザーマニュアル(&M)"
+        Me.menuItemDev.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.menuItemHelpTables})
+        Me.menuItemDev.Name = "menuItemDev"
+        Me.menuItemDev.Size = New System.Drawing.Size(55, 20)
+        Me.menuItemDev.Text = "開発(&D)"
         '
         'menuItemHelpTables
         '
@@ -190,6 +184,20 @@ Partial Class MainForm
         Me.menuItemTableExchangeCache.Name = "menuItemTableExchangeCache"
         Me.menuItemTableExchangeCache.Size = New System.Drawing.Size(206, 22)
         Me.menuItemTableExchangeCache.Text = "exchange_address_cache"
+        '
+        'menuItemHelp
+        '
+        Me.menuItemHelp.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.menuItemHelpManual, Me.menuItemHelpAbout})
+        Me.menuItemHelp.Name = "menuItemHelp"
+        Me.menuItemHelp.Size = New System.Drawing.Size(65, 20)
+        Me.menuItemHelp.Text = "ヘルプ(&H)"
+        '
+        'menuItemHelpManual
+        '
+        Me.menuItemHelpManual.Name = "menuItemHelpManual"
+        Me.menuItemHelpManual.ShortcutKeys = System.Windows.Forms.Keys.F1
+        Me.menuItemHelpManual.Size = New System.Drawing.Size(193, 22)
+        Me.menuItemHelpManual.Text = "ユーザーマニュアル(&M)"
         '
         'menuItemHelpAbout
         '
@@ -498,6 +506,7 @@ Partial Class MainForm
     Friend WithEvents menuItemErrorExclusion As System.Windows.Forms.ToolStripMenuItem
 
     Friend WithEvents menuItemSettings As System.Windows.Forms.ToolStripMenuItem
+    Friend WithEvents menuItemDev As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents menuItemHelp As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents menuItemHelpTables As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents menuItemTableEmails As System.Windows.Forms.ToolStripMenuItem
