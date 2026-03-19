@@ -1183,28 +1183,8 @@ Public Class MainForm
 
     ' ── テーブルビューア ──────────────────────────────────────
 
-    Private Sub menuItemTableEmails_Click(sender As Object, e As EventArgs) Handles menuItemTableEmails.Click
+    Private Sub menuItemDevTableViewer_Click(sender As Object, e As EventArgs) Handles menuItemDevTableViewer.Click
         ShowTableViewer("emails")
-    End Sub
-
-    Private Sub menuItemTableAttachments_Click(sender As Object, e As EventArgs) Handles menuItemTableAttachments.Click
-        ShowTableViewer("attachments")
-    End Sub
-
-    Private Sub menuItemTableDeletedIds_Click(sender As Object, e As EventArgs) Handles menuItemTableDeletedIds.Click
-        ShowTableViewer("deleted_message_ids")
-    End Sub
-
-    Private Sub menuItemTableExchangeCache_Click(sender As Object, e As EventArgs) Handles menuItemTableExchangeCache.Click
-        ShowTableViewer("exchange_address_cache")
-    End Sub
-
-    Private Sub menuItemTableErrorIds_Click(sender As Object, e As EventArgs) Handles menuItemTableErrorIds.Click
-        ShowTableViewer("error_message_ids")
-    End Sub
-
-    Private Sub menuItemTableFolderSync_Click(sender As Object, e As EventArgs) Handles menuItemTableFolderSync.Click
-        ShowTableViewer("folder_sync_state")
     End Sub
 
     Private Sub ShowTableViewer(tableName As String)

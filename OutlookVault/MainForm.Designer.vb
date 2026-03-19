@@ -34,13 +34,7 @@ Partial Class MainForm
 
         Me.menuItemSettings = New System.Windows.Forms.ToolStripMenuItem()
         Me.menuItemDev = New System.Windows.Forms.ToolStripMenuItem()
-        Me.menuItemHelpTables = New System.Windows.Forms.ToolStripMenuItem()
-        Me.menuItemTableEmails = New System.Windows.Forms.ToolStripMenuItem()
-        Me.menuItemTableAttachments = New System.Windows.Forms.ToolStripMenuItem()
-        Me.menuItemTableDeletedIds = New System.Windows.Forms.ToolStripMenuItem()
-        Me.menuItemTableExchangeCache = New System.Windows.Forms.ToolStripMenuItem()
-        Me.menuItemTableErrorIds = New System.Windows.Forms.ToolStripMenuItem()
-        Me.menuItemTableFolderSync = New System.Windows.Forms.ToolStripMenuItem()
+        Me.menuItemDevTableViewer = New System.Windows.Forms.ToolStripMenuItem()
         Me.menuItemHelp = New System.Windows.Forms.ToolStripMenuItem()
         Me.menuItemHelpManual = New System.Windows.Forms.ToolStripMenuItem()
         Me.menuItemHelpAbout = New System.Windows.Forms.ToolStripMenuItem()
@@ -151,53 +145,16 @@ Partial Class MainForm
         '
         'menuItemDev
         '
-        Me.menuItemDev.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.menuItemHelpTables})
+        Me.menuItemDev.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.menuItemDevTableViewer})
         Me.menuItemDev.Name = "menuItemDev"
         Me.menuItemDev.Size = New System.Drawing.Size(55, 20)
         Me.menuItemDev.Text = "開発(&D)"
         '
-        'menuItemHelpTables
+        'menuItemDevTableViewer
         '
-        Me.menuItemHelpTables.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.menuItemTableEmails, Me.menuItemTableAttachments, Me.menuItemTableDeletedIds, Me.menuItemTableExchangeCache, Me.menuItemTableErrorIds, Me.menuItemTableFolderSync})
-        Me.menuItemHelpTables.Name = "menuItemHelpTables"
-        Me.menuItemHelpTables.Size = New System.Drawing.Size(193, 22)
-        Me.menuItemHelpTables.Text = "テーブル(&T)"
-        '
-        'menuItemTableEmails
-        '
-        Me.menuItemTableEmails.Name = "menuItemTableEmails"
-        Me.menuItemTableEmails.Size = New System.Drawing.Size(206, 22)
-        Me.menuItemTableEmails.Text = "emails"
-        '
-        'menuItemTableAttachments
-        '
-        Me.menuItemTableAttachments.Name = "menuItemTableAttachments"
-        Me.menuItemTableAttachments.Size = New System.Drawing.Size(206, 22)
-        Me.menuItemTableAttachments.Text = "attachments"
-        '
-        'menuItemTableDeletedIds
-        '
-        Me.menuItemTableDeletedIds.Name = "menuItemTableDeletedIds"
-        Me.menuItemTableDeletedIds.Size = New System.Drawing.Size(206, 22)
-        Me.menuItemTableDeletedIds.Text = "deleted_message_ids"
-        '
-        'menuItemTableExchangeCache
-        '
-        Me.menuItemTableExchangeCache.Name = "menuItemTableExchangeCache"
-        Me.menuItemTableExchangeCache.Size = New System.Drawing.Size(206, 22)
-        Me.menuItemTableExchangeCache.Text = "exchange_address_cache"
-        '
-        'menuItemTableErrorIds
-        '
-        Me.menuItemTableErrorIds.Name = "menuItemTableErrorIds"
-        Me.menuItemTableErrorIds.Size = New System.Drawing.Size(206, 22)
-        Me.menuItemTableErrorIds.Text = "error_message_ids"
-        '
-        'menuItemTableFolderSync
-        '
-        Me.menuItemTableFolderSync.Name = "menuItemTableFolderSync"
-        Me.menuItemTableFolderSync.Size = New System.Drawing.Size(206, 22)
-        Me.menuItemTableFolderSync.Text = "folder_sync_state"
+        Me.menuItemDevTableViewer.Name = "menuItemDevTableViewer"
+        Me.menuItemDevTableViewer.Size = New System.Drawing.Size(193, 22)
+        Me.menuItemDevTableViewer.Text = "テーブルビューア(&T)"
         '
         'menuItemHelp
         '
@@ -521,14 +478,8 @@ Partial Class MainForm
 
     Friend WithEvents menuItemSettings As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents menuItemDev As System.Windows.Forms.ToolStripMenuItem
+    Friend WithEvents menuItemDevTableViewer As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents menuItemHelp As System.Windows.Forms.ToolStripMenuItem
-    Friend WithEvents menuItemHelpTables As System.Windows.Forms.ToolStripMenuItem
-    Friend WithEvents menuItemTableEmails As System.Windows.Forms.ToolStripMenuItem
-    Friend WithEvents menuItemTableAttachments As System.Windows.Forms.ToolStripMenuItem
-    Friend WithEvents menuItemTableDeletedIds As System.Windows.Forms.ToolStripMenuItem
-    Friend WithEvents menuItemTableErrorIds As System.Windows.Forms.ToolStripMenuItem
-    Friend WithEvents menuItemTableFolderSync As System.Windows.Forms.ToolStripMenuItem
-    Friend WithEvents menuItemTableExchangeCache As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents menuItemHelpManual As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents menuItemHelpAbout As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents toolStrip As System.Windows.Forms.ToolStrip
