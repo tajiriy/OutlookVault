@@ -86,6 +86,7 @@
     <Compile Include="AttachmentStatsFormTests.vb" />
     <Compile Include="TableViewerFormTests.vb" />
     <Compile Include="AutoDeleteRuleTests.vb" />
+    <Compile Include="ImportServiceTests.vb" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
 </Project>

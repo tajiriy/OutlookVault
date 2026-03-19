@@ -1,6 +1,9 @@
 ﻿Imports System
 Imports System.Reflection
+Imports System.Runtime.CompilerServices
 Imports System.Runtime.InteropServices
+
+<Assembly: InternalsVisibleTo("OutlookVault.Tests")>
 
 ' アセンブリに関する一般情報は以下を通して制御されます
 ' アセンブリに関連付けられている情報を変更するには、
@@ -28,5 +31,5 @@ Imports System.Runtime.InteropServices
 '      Revision
 '
 
-<Assembly: AssemblyVersion("1.0.98.0")>
-<Assembly: AssemblyFileVersion("1.0.98.0")>
+<Assembly: AssemblyVersion("1.0.103.0")>
+<Assembly: AssemblyFileVersion("1.0.103.0")>

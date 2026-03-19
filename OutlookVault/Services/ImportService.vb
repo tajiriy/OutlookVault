@@ -295,11 +295,12 @@ Namespace Services
                 Dim syncState As Models.FolderSyncState = _repo.GetFolderSyncState(folderName)
                 If syncState IsNot Nothing AndAlso syncState.FullSyncDone Then
                     Dim sinceDate As DateTime = syncState.LastSyncTime.AddHours(-_settings.DiffSyncBufferHours)
-                    Dim filter As String = "[ReceivedTime] >= '" & sinceDate.ToString("yyyy/MM/dd HH:mm") & "'"
+                    Dim dateField As String = GetDiffScanDateField(folderName)
+                    Dim filter As String = "[" & dateField & "] >= '" & sinceDate.ToString("yyyy/MM/dd HH:mm") & "'"
                     Dim allItems As Outlook.Items = folder.Items
                     items = allItems.Restrict(filter)
                     Runtime.InteropServices.Marshal.ReleaseComObject(allItems)
-                    Logger.Info(String.Format("フォルダ '{0}' を差分スキャンします（基準日時: {1}）", folderName, sinceDate.ToString("yyyy/MM/dd HH:mm")))
+                    Logger.Info(String.Format("フォルダ '{0}' を差分スキャンします（フィルタ: {1}、基準日時: {2}）", folderName, dateField, sinceDate.ToString("yyyy/MM/dd HH:mm")))
                 Else
                     items = folder.Items
                     useDiffScan = False
@@ -309,6 +310,30 @@ Namespace Services
                 items = folder.Items
             End If
         End Sub
+
+        ''' <summary>送信系フォルダかどうかを判定する。</summary>
+        Friend Shared Function IsSentFolder(folderName As String) As Boolean
+            If String.IsNullOrEmpty(folderName) Then Return False
+            ' 日本語・英語の送信系フォルダ名に対応
+            Dim sentFolderNames As String() = New String() {
+                "送信済みアイテム", "送信トレイ",
+                "Sent Items", "Sent Mail", "Sent Messages", "Outbox"
+            }
+            For Each name As String In sentFolderNames
+                If folderName.Equals(name, StringComparison.OrdinalIgnoreCase) Then
+                    Return True
+                End If
+            Next
+            Return False
+        End Function
+
+        ''' <summary>差分スキャンで使用する日付フィールド名を返す。送信系フォルダは SentOn、それ以外は ReceivedTime。</summary>
+        Private Shared Function GetDiffScanDateField(folderName As String) As String
+            If IsSentFolder(folderName) Then
+                Return "SentOn"
+            End If
+            Return "ReceivedTime"
+        End Function
 
         ''' <summary>個別メールの取り込みエラーを処理し、エラー情報を記録する。</summary>
         Private Sub HandleMailItemError(mailItem As Outlook.MailItem, folderName As String,
@@ -373,8 +398,8 @@ Namespace Services
             ' 差分スキャンを使用するか判定
             Dim useDiffScan As Boolean = (Not fullScan) AndAlso (_settings.SyncMode = 1)
 
-            ' 全 MessageID を一括キャッシュ（1件ずつ SQL を発行するより大幅に高速）
-            Dim existingIds As HashSet(Of String) = _repo.GetAllMessageIds()
+            ' 全 MessageID+FolderName ペアを一括キャッシュ（1件ずつ SQL を発行するより大幅に高速）
+            Dim existingIds As HashSet(Of String) = _repo.GetAllMessageIdFolderPairs()
             Dim deletedIds As HashSet(Of String) = _repo.GetAllDeletedMessageIds()
             Dim errorIds As HashSet(Of String) = _repo.GetAllErrorMessageIds()
 
@@ -507,7 +532,9 @@ Namespace Services
             ' 軽量に MessageID だけ取得して重複チェック（本文・受信者等の重いCOM操作を回避）
             Dim messageId As String = _outlookSvc.ExtractMessageId(mailItem)
             If Not String.IsNullOrEmpty(messageId) Then
-                If existingIds.Contains(messageId) Then Return False
+                ' MessageID+FolderName ペアで重複判定（同じメールでもフォルダが異なれば別レコード）
+                Dim pairKey As String = messageId & vbTab & folderName
+                If existingIds.Contains(pairKey) Then Return False
                 If deletedIds.Contains(messageId) Then Return False
                 If errorIds.Contains(messageId) Then
                     skipReason = SkipReasonError
@@ -518,6 +545,9 @@ Namespace Services
             ' 新規メールのみフルデータを抽出
             Dim email As Models.Email = _outlookSvc.ExtractEmailData(mailItem)
 
+            ' フォルダ名を取り込み元フォルダで上書き（mailItem.Parent と異なる場合がある）
+            email.FolderName = folderName
+
             ' スレッド ID を付与
             _threadingSvc.AssignThreadId(email)
 
@@ -527,7 +557,7 @@ Namespace Services
 
             ' キャッシュに追加（同一セッション内の重複防止）
             If Not String.IsNullOrEmpty(email.MessageId) Then
-                existingIds.Add(email.MessageId)
+                existingIds.Add(email.MessageId & vbTab & folderName)
             End If
 
             ' 添付ファイルを保存して DB に登録

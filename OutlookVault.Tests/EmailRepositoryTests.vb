@@ -314,24 +314,24 @@ Namespace Tests
         End Sub
 
         <Test>
-        Public Sub GetAllMessageIds_ReturnsAllIds()
+        Public Sub GetAllMessageIdFolderPairs_ReturnsAllPairs()
             _repo.InsertEmail(CreateTestEmail("msg1@example.com"))
             _repo.InsertEmail(CreateTestEmail("msg2@example.com"))
 
-            Dim ids As HashSet(Of String) = _repo.GetAllMessageIds()
+            Dim pairs As HashSet(Of String) = _repo.GetAllMessageIdFolderPairs()
 
-            Assert.AreEqual(2, ids.Count)
-            Assert.IsTrue(ids.Contains("msg1@example.com"))
-            Assert.IsTrue(ids.Contains("msg2@example.com"))
+            Assert.AreEqual(2, pairs.Count)
+            Assert.IsTrue(pairs.Contains("msg1@example.com" & vbTab & "受信トレイ"))
+            Assert.IsTrue(pairs.Contains("msg2@example.com" & vbTab & "受信トレイ"))
         End Sub
 
         <Test>
-        Public Sub GetAllMessageIds_CaseInsensitive()
+        Public Sub GetAllMessageIdFolderPairs_CaseInsensitive()
             _repo.InsertEmail(CreateTestEmail("Test@Example.COM"))
 
-            Dim ids As HashSet(Of String) = _repo.GetAllMessageIds()
+            Dim pairs As HashSet(Of String) = _repo.GetAllMessageIdFolderPairs()
 
-            Assert.IsTrue(ids.Contains("test@example.com"))
+            Assert.IsTrue(pairs.Contains("test@example.com" & vbTab & "受信トレイ"))
         End Sub
 
         ' ════════════════════════════════════════════════════════════
@@ -857,6 +857,55 @@ Namespace Tests
 
         ' ════════════════════════════════════════════════════════════
         '  ヘルパー
+        ' ════════════════════════════════════════════════════════════
+
+        ' ── 同一 MessageID のフォルダ別保存 ──────────────────────────
+
+        <Test>
+        Public Sub InsertEmail_SameMessageIdDifferentFolder_BothInserted()
+            Dim email1 As Email = CreateTestEmail("shared@example.com")
+            email1.FolderName = "受信トレイ"
+            Dim email2 As Email = CreateTestEmail("shared@example.com")
+            email2.FolderName = "送信済みアイテム"
+
+            Dim id1 As Integer = _repo.InsertEmail(email1)
+            Dim id2 As Integer = _repo.InsertEmail(email2)
+
+            Assert.IsTrue(id1 > 0)
+            Assert.IsTrue(id2 > 0)
+            Assert.AreNotEqual(id1, id2)
+        End Sub
+
+        <Test>
+        Public Sub GetAllMessageIdFolderPairs_ReturnsPairsPerFolder()
+            Dim email1 As Email = CreateTestEmail("pair@example.com")
+            email1.FolderName = "受信トレイ"
+            Dim email2 As Email = CreateTestEmail("pair@example.com")
+            email2.FolderName = "送信済みアイテム"
+
+            _repo.InsertEmail(email1)
+            _repo.InsertEmail(email2)
+
+            Dim pairs As HashSet(Of String) = _repo.GetAllMessageIdFolderPairs()
+
+            Assert.IsTrue(pairs.Contains("pair@example.com" & vbTab & "受信トレイ"))
+            Assert.IsTrue(pairs.Contains("pair@example.com" & vbTab & "送信済みアイテム"))
+            Assert.That(pairs.Count, [Is].GreaterThanOrEqualTo(2))
+        End Sub
+
+        <Test>
+        Public Sub InsertEmail_SameMessageIdSameFolder_ThrowsException()
+            Dim email1 As Email = CreateTestEmail("dup-folder@example.com")
+            email1.FolderName = "受信トレイ"
+            _repo.InsertEmail(email1)
+
+            Dim email2 As Email = CreateTestEmail("dup-folder@example.com")
+            email2.FolderName = "受信トレイ"
+
+            Assert.Throws(Of System.Data.SQLite.SQLiteException)(
+                Sub() _repo.InsertEmail(email2))
+        End Sub
+
         ' ════════════════════════════════════════════════════════════
 
         Private Shared Function CreateTestEmail(messageId As String) As Email

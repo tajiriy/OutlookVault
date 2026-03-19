@@ -58,7 +58,7 @@ Namespace Data
             Dim sql As String = "
 CREATE TABLE IF NOT EXISTS emails (
     id                 INTEGER PRIMARY KEY AUTOINCREMENT,
-    message_id         TEXT UNIQUE,
+    message_id         TEXT,
     in_reply_to        TEXT,
     [references]       TEXT,
     thread_id          TEXT,
@@ -79,7 +79,8 @@ CREATE TABLE IF NOT EXISTS emails (
     email_size         INTEGER DEFAULT 0,
     created_at         TEXT DEFAULT (datetime('now', 'localtime')),
     updated_at         TEXT DEFAULT (datetime('now', 'localtime')),
-    deleted_at         TEXT
+    deleted_at         TEXT,
+    UNIQUE(message_id, folder_name)
 );
 
 CREATE TABLE IF NOT EXISTS attachments (
@@ -158,6 +159,83 @@ CREATE INDEX IF NOT EXISTS idx_emails_deleted_at         ON emails(deleted_at);"
             If Not ColumnExists(conn, "emails", "deleted_at") Then
                 ExecuteNonQuery(conn, "ALTER TABLE emails ADD COLUMN deleted_at TEXT;")
             End If
+
+            ' v1.x → 同一 MessageID のフォルダ別保存: UNIQUE(message_id) → UNIQUE(message_id, folder_name)
+            ' SQLite はカラム制約の UNIQUE を直接削除できないため、テーブルを再作成する
+            If HasUniqueConstraintOnMessageIdOnly(conn) Then
+                MigrateMessageIdUnique(conn)
+            End If
+        End Sub
+
+        ''' <summary>emails テーブルの message_id カラムに単独 UNIQUE 制約があるか確認する。</summary>
+        Private Shared Function HasUniqueConstraintOnMessageIdOnly(conn As SQLiteConnection) As Boolean
+            ' index_list で UNIQUE インデックスを列挙し、message_id 単独のものがあるか確認
+            Using cmd As New SQLiteCommand("PRAGMA index_list(emails);", conn)
+                Using reader As SQLiteDataReader = cmd.ExecuteReader()
+                    While reader.Read()
+                        Dim indexName As String = reader("name").ToString()
+                        Dim isUnique As Boolean = Convert.ToInt32(reader("unique")) = 1
+                        If Not isUnique Then Continue While
+
+                        ' このインデックスの列を確認
+                        Dim columns As New List(Of String)()
+                        Using cmd2 As New SQLiteCommand(String.Format("PRAGMA index_info({0});", indexName), conn)
+                            Using reader2 As SQLiteDataReader = cmd2.ExecuteReader()
+                                While reader2.Read()
+                                    columns.Add(reader2("name").ToString())
+                                End While
+                            End Using
+                        End Using
+
+                        ' message_id 単独の UNIQUE インデックスか
+                        If columns.Count = 1 AndAlso
+                           String.Equals(columns(0), "message_id", StringComparison.OrdinalIgnoreCase) Then
+                            Return True
+                        End If
+                    End While
+                End Using
+            End Using
+            Return False
+        End Function
+
+        ''' <summary>emails テーブルを再作成して UNIQUE(message_id, folder_name) に変更する。</summary>
+        Private Sub MigrateMessageIdUnique(conn As SQLiteConnection)
+            Services.Logger.Info("マイグレーション: emails テーブルの UNIQUE 制約を (message_id, folder_name) に変更します")
+            Dim sql As String = "
+BEGIN TRANSACTION;
+CREATE TABLE emails_new (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    message_id         TEXT,
+    in_reply_to        TEXT,
+    [references]       TEXT,
+    thread_id          TEXT,
+    entry_id           TEXT,
+    subject            TEXT,
+    normalized_subject TEXT,
+    sender_name        TEXT,
+    sender_email       TEXT,
+    to_recipients      TEXT,
+    cc_recipients      TEXT,
+    bcc_recipients     TEXT,
+    body_text          TEXT,
+    body_html          TEXT,
+    received_at        TEXT NOT NULL,
+    sent_at            TEXT,
+    folder_name        TEXT,
+    has_attachments    INTEGER DEFAULT 0,
+    email_size         INTEGER DEFAULT 0,
+    created_at         TEXT DEFAULT (datetime('now', 'localtime')),
+    updated_at         TEXT DEFAULT (datetime('now', 'localtime')),
+    deleted_at         TEXT,
+    UNIQUE(message_id, folder_name)
+);
+INSERT INTO emails_new SELECT * FROM emails;
+DROP TABLE emails;
+ALTER TABLE emails_new RENAME TO emails;
+COMMIT;"
+            ExecuteNonQuery(conn, sql)
+            ' インデックスはテーブル再作成で消えるが CreateIndices で再作成される
+            Services.Logger.Info("マイグレーション: UNIQUE 制約の変更が完了しました")
         End Sub
 
         ''' <summary>指定テーブルに指定カラムが存在するか確認する。</summary>

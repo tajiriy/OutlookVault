@@ -551,14 +551,17 @@ SELECT last_insert_rowid();"
         ' ════════════════════════════════════════════════════════════
 
         ''' <summary>全メールの MessageID を一括取得する（取り込み時の高速重複チェック用）。</summary>
-        Public Function GetAllMessageIds() As HashSet(Of String)
-            Const sql As String = "SELECT message_id FROM emails WHERE message_id IS NOT NULL"
+        ''' <summary>全メールの MessageID+FolderName ペアを一括取得する（取り込み時の高速重複チェック用）。</summary>
+        Public Function GetAllMessageIdFolderPairs() As HashSet(Of String)
+            Const sql As String = "SELECT message_id, folder_name FROM emails WHERE message_id IS NOT NULL"
             Dim result As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
             Using conn As SQLiteConnection = _dbManager.GetConnection()
                 Using cmd As New SQLiteCommand(sql, conn)
                     Using reader As SQLiteDataReader = cmd.ExecuteReader()
                         While reader.Read()
-                            result.Add(reader.GetString(0))
+                            Dim msgId As String = reader.GetString(0)
+                            Dim folder As String = If(reader.IsDBNull(1), "", reader.GetString(1))
+                            result.Add(msgId & vbTab & folder)
                         End While
                     End Using
                 End Using
