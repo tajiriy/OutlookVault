@@ -15,7 +15,7 @@ Namespace Forms
     Public Class TableViewerForm
         Inherits Form
 
-        Private Shared ReadOnly TableNames() As String = {"emails", "attachments", "deleted_message_ids", "exchange_address_cache", "error_message_ids"}
+        Private Shared ReadOnly TableNames() As String = {"emails", "attachments", "deleted_message_ids", "exchange_address_cache", "error_message_ids", "folder_sync_state"}
         Private Const MaxColumnWidth As Integer = 200
 
         Private ReadOnly _dbManager As Data.DatabaseManager

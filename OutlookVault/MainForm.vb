@@ -1199,6 +1199,14 @@ Public Class MainForm
         ShowTableViewer("exchange_address_cache")
     End Sub
 
+    Private Sub menuItemTableErrorIds_Click(sender As Object, e As EventArgs) Handles menuItemTableErrorIds.Click
+        ShowTableViewer("error_message_ids")
+    End Sub
+
+    Private Sub menuItemTableFolderSync_Click(sender As Object, e As EventArgs) Handles menuItemTableFolderSync.Click
+        ShowTableViewer("folder_sync_state")
+    End Sub
+
     Private Sub ShowTableViewer(tableName As String)
         Using frm As New Forms.TableViewerForm(_dbManager, tableName)
             frm.ShowDialog(Me)
