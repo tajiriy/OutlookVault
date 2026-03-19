@@ -25,6 +25,7 @@ Public Class MainForm
     Private _autoImportEnabled As Boolean
     Private _isRealClose As Boolean       ' True = 本当に終了する（トレイ格納ではなく）
     Private _searchQuery As String        ' 現在の検索クエリ（Nothing = 検索なし）
+    Private _openEmailWindows As New Dictionary(Of Integer, Forms.EmailViewForm)() ' メールID → 開いているビューウィンドウ
     Private _updatingFolderCounts As Boolean ' フォルダ件数更新中のイベント抑制フラグ
     Private _currentFolderTotalCount As Integer ' 現在選択中フォルダの総件数
     Private _loadVersion As Integer             ' LoadEmailsAsync の競合検出用バージョン番号
@@ -281,11 +282,34 @@ Public Class MainForm
         Dim idx As Integer = listViewEmails.SelectedIndices(0)
         If idx < 0 OrElse idx >= _emailCache.Count Then Return
 
-        Dim email As Models.Email = _repo.GetEmailById(_emailCache(idx).Id)
+        Dim emailId As Integer = _emailCache(idx).Id
+
+        ' 既に同じメールのウィンドウが開いている場合は前面に表示
+        If _openEmailWindows.ContainsKey(emailId) Then
+            Dim existing As Forms.EmailViewForm = _openEmailWindows(emailId)
+            If Not existing.IsDisposed Then
+                If existing.WindowState = FormWindowState.Minimized Then
+                    existing.WindowState = FormWindowState.Normal
+                End If
+                existing.Activate()
+                Return
+            Else
+                _openEmailWindows.Remove(emailId)
+            End If
+        End If
+
+        Dim email As Models.Email = _repo.GetEmailById(emailId)
         If email Is Nothing Then Return
 
         Dim frm As New Forms.EmailViewForm()
         frm.ShowEmail(email, _searchQuery)
+
+        ' ウィンドウを辞書に登録し、閉じたときに削除する
+        _openEmailWindows(emailId) = frm
+        Dim capturedId As Integer = emailId
+        AddHandler frm.FormClosed, Sub(s As Object, ev As FormClosedEventArgs)
+                                       _openEmailWindows.Remove(capturedId)
+                                   End Sub
         frm.Show()
     End Sub
 
