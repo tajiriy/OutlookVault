@@ -4,9 +4,9 @@
 
 | ステータス | 件数 |
 |-----------|------|
-| open      | 15   |
+| open      | 14   |
 | in-progress | 0  |
-| done      | 1    |
+| done      | 2    |
 | wontfix   | 0    |
 
 ## カテゴリ
@@ -68,17 +68,17 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | High |
 | カテゴリ | resource-management |
 | ソース | review |
 | 対象ファイル | OutlookVault/Data/EmailRepository.vb |
 | 登録日 | 2026-03-19 |
-| 修正日 | - |
+| 修正日 | 2026-03-19 |
 
 **内容:** `_bulkConn`・`_bulkTx`・`_bulkEmailCmd`・`_bulkAttachCmd` をフィールド保持しているが `IDisposable` 未実装。`CommitBulk` / `RollbackBulk` を呼ばずに例外で抜けた場合、リソースが解放されない。
 
-**対策:** `IDisposable` を実装し `Dispose` 内で `RollbackBulk` を呼ぶ。`MainForm` の `_repo` は `FormClosed` またはオーバーライドした `Dispose` で解放する。
+**対策:** `IDisposable` を実装。`Dispose(Boolean)` パターンで `RollbackBulk()` を呼び、未コミットのバルクリソースを確実に解放。`_disposed` フラグで二重呼び出しを防止。`MainForm.Designer.vb` の `Dispose` に `_repo.Dispose()` を追加してフォーム終了時にも解放。
 
 **メモ:** なし
 
@@ -349,3 +349,4 @@
 | 2026-03-19 | - | トラッカー新規作成 |
 | 2026-03-19 | R-001〜R-016 | code-reviewer による初回全体レビューから 16 件を一括登録 |
 | 2026-03-19 | R-002 | done: String→Enum SynchronousMode に変更、テスト追加 |
+| 2026-03-19 | R-003 | done: IDisposable 実装、MainForm.Dispose で解放 |
