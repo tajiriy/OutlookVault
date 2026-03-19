@@ -1203,7 +1203,10 @@ Public Class MainForm
     ''' DB と添付ファイルはすでに削除済みの前提で呼び出すこと。
     ''' </summary>
     Private Async Sub ReinitializeApp()
-        ' サービス再生成（DB ファイルを新規作成してスキーマを初期化）
+        ' 既存リソースを解放してからサービス再生成
+        If _repo IsNot Nothing Then
+            _repo.Dispose()
+        End If
         InitializeServices()
 
         ' 自動取り込みタイマー間隔を再設定

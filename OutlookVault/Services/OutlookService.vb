@@ -298,8 +298,9 @@ Namespace Services
                                 If Not String.IsNullOrEmpty(messageId) Then
                                     result.Add(messageId)
                                 End If
-                            Catch
-                                ' 個別メールの MessageID 取得エラーはスキップ
+                            Catch ex As Exception
+                                ' 個別メールの MessageID 取得エラーはスキップ（COMエラー等）
+                                System.Diagnostics.Debug.WriteLine("MessageID取得エラー (item " & i.ToString() & "): " & ex.Message)
                             End Try
                         End If
                     Finally
