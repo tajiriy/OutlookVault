@@ -372,6 +372,50 @@ Partial Class SettingsForm
         Me.chkShowImportErrorDialog.TabIndex = 3
         Me.chkShowImportErrorDialog.Text = "取り込みエラー時に結果ダイアログを表示する"
         '
+        'grpTrash
+        '
+        Me.grpTrash = New System.Windows.Forms.GroupBox()
+        Me.lblTrashDays = New System.Windows.Forms.Label()
+        Me.numTrashDays = New System.Windows.Forms.NumericUpDown()
+        Me.lblTrashDaysUnit = New System.Windows.Forms.Label()
+        CType(Me.numTrashDays, System.ComponentModel.ISupportInitialize).BeginInit()
+        Me.grpTrash.Controls.Add(Me.lblTrashDays)
+        Me.grpTrash.Controls.Add(Me.numTrashDays)
+        Me.grpTrash.Controls.Add(Me.lblTrashDaysUnit)
+        Me.grpTrash.Location = New System.Drawing.Point(8, 587)
+        Me.grpTrash.Name = "grpTrash"
+        Me.grpTrash.Size = New System.Drawing.Size(488, 52)
+        Me.grpTrash.TabIndex = 7
+        Me.grpTrash.TabStop = False
+        Me.grpTrash.Text = "ゴミ箱"
+        '
+        'lblTrashDays
+        '
+        Me.lblTrashDays.AutoSize = True
+        Me.lblTrashDays.Location = New System.Drawing.Point(8, 24)
+        Me.lblTrashDays.Name = "lblTrashDays"
+        Me.lblTrashDays.Size = New System.Drawing.Size(100, 12)
+        Me.lblTrashDays.Text = "自動削除までの日数:"
+        '
+        'numTrashDays
+        '
+        Me.numTrashDays.Location = New System.Drawing.Point(150, 22)
+        Me.numTrashDays.Name = "numTrashDays"
+        Me.numTrashDays.Size = New System.Drawing.Size(60, 19)
+        Me.numTrashDays.Minimum = CDec(0)
+        Me.numTrashDays.Maximum = CDec(365)
+        Me.numTrashDays.Value = CDec(30)
+        '
+        'lblTrashDaysUnit
+        '
+        Me.lblTrashDaysUnit.AutoSize = True
+        Me.lblTrashDaysUnit.Location = New System.Drawing.Point(216, 24)
+        Me.lblTrashDaysUnit.Name = "lblTrashDaysUnit"
+        Me.lblTrashDaysUnit.Size = New System.Drawing.Size(120, 12)
+        Me.lblTrashDaysUnit.Text = "日（0 で自動削除しない）"
+        '
+        CType(Me.numTrashDays, System.ComponentModel.ISupportInitialize).EndInit()
+        '
         'grpTray
         '
         Me.chkStartWithWindows = New System.Windows.Forms.CheckBox()
@@ -379,7 +423,7 @@ Partial Class SettingsForm
         Me.grpTray.Controls.Add(Me.chkMinimizeToTray)
         Me.grpTray.Controls.Add(Me.chkCloseToTray)
         Me.grpTray.Controls.Add(Me.chkShowBalloonOnImport)
-        Me.grpTray.Location = New System.Drawing.Point(8, 587)
+        Me.grpTray.Location = New System.Drawing.Point(8, 647)
         Me.grpTray.Name = "grpTray"
         Me.grpTray.Size = New System.Drawing.Size(488, 118)
         Me.grpTray.TabIndex = 6
@@ -425,7 +469,7 @@ Partial Class SettingsForm
         'grpData
         '
         Me.grpData.Controls.Add(Me.btnResetData)
-        Me.grpData.Location = New System.Drawing.Point(8, 713)
+        Me.grpData.Location = New System.Drawing.Point(8, 773)
         Me.grpData.Name = "grpData"
         Me.grpData.Size = New System.Drawing.Size(488, 56)
         Me.grpData.TabIndex = 5
@@ -444,7 +488,7 @@ Partial Class SettingsForm
         '
         Me.pnlButtons.Controls.Add(Me.btnOk)
         Me.pnlButtons.Controls.Add(Me.btnCancel)
-        Me.pnlButtons.Location = New System.Drawing.Point(8, 777)
+        Me.pnlButtons.Location = New System.Drawing.Point(8, 837)
         Me.pnlButtons.Name = "pnlButtons"
         Me.pnlButtons.Size = New System.Drawing.Size(488, 34)
         Me.pnlButtons.TabIndex = 4
@@ -473,11 +517,12 @@ Partial Class SettingsForm
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.Font = New System.Drawing.Font("Meiryo UI", 9.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(128, Byte))
         Me.CancelButton = Me.btnCancel
-        Me.ClientSize = New System.Drawing.Size(512, 819)
+        Me.ClientSize = New System.Drawing.Size(512, 879)
         Me.Controls.Add(Me.grpPaths)
         Me.Controls.Add(Me.grpFolders)
         Me.Controls.Add(Me.grpAutoImport)
         Me.Controls.Add(Me.grpDisplay)
+        Me.Controls.Add(Me.grpTrash)
         Me.Controls.Add(Me.grpTray)
         Me.Controls.Add(Me.grpData)
         Me.Controls.Add(Me.pnlButtons)
@@ -536,6 +581,10 @@ Partial Class SettingsForm
     Friend WithEvents chkShowImportResult As System.Windows.Forms.CheckBox
     Friend WithEvents chkShowImportErrorDialog As System.Windows.Forms.CheckBox
     Friend WithEvents chkSyncDeletions As System.Windows.Forms.CheckBox
+    Friend WithEvents grpTrash As System.Windows.Forms.GroupBox
+    Friend WithEvents lblTrashDays As System.Windows.Forms.Label
+    Friend WithEvents numTrashDays As System.Windows.Forms.NumericUpDown
+    Friend WithEvents lblTrashDaysUnit As System.Windows.Forms.Label
     Friend WithEvents grpTray As System.Windows.Forms.GroupBox
     Friend WithEvents chkMinimizeToTray As System.Windows.Forms.CheckBox
     Friend WithEvents chkCloseToTray As System.Windows.Forms.CheckBox

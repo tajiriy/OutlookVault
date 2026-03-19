@@ -101,7 +101,7 @@ Public Class MainForm
         Await UpdateStatusBarAsync()
 
         ' ゴミ箱の自動パージ
-        PurgeExpiredTrashOnStartup()
+        PurgeExpiredTrash()
 
         Services.Logger.Info("初期化が完了しました")
 
@@ -372,6 +372,22 @@ Public Class MainForm
         item.SubItems.Add(If(displaySender, String.Empty))               ' col 2: 差出人
         item.SubItems.Add(email.ReceivedAt.ToString("yyyy/MM/dd HH:mm")) ' col 3: 受信日時
         item.SubItems.Add(FormatEmailSize(email.EmailSize))              ' col 4: サイズ
+        ' ゴミ箱表示時: 追加列
+        If _isTrashView Then
+            item.SubItems.Add(If(email.FolderName, String.Empty))                            ' col 5: フォルダ
+            If email.DeletedAt.HasValue Then
+                item.SubItems.Add(email.DeletedAt.Value.ToString("yyyy/MM/dd HH:mm"))        ' col 6: 削除日時
+                Dim trashDays As Integer = _settings.TrashAutoDeleteDays
+                If trashDays > 0 Then
+                    item.SubItems.Add(email.DeletedAt.Value.AddDays(trashDays).ToString("yyyy/MM/dd HH:mm")) ' col 7: 削除予定日時
+                Else
+                    item.SubItems.Add("（自動削除なし）")
+                End If
+            Else
+                item.SubItems.Add(String.Empty)
+                item.SubItems.Add(String.Empty)
+            End If
+        End If
         item.Tag = email.Id
         e.Item = item
     End Sub
@@ -525,6 +541,9 @@ Public Class MainForm
 
             ' トレイ常駐中はバルーン通知
             ShowImportBalloon(result)
+
+            ' ゴミ箱の期限切れメールをパージ
+            PurgeExpiredTrash()
 
             ' フォルダツリーとメール一覧を更新
             LoadFolderTree()
@@ -918,7 +937,7 @@ Public Class MainForm
     End Sub
 
     ''' <summary>起動時にゴミ箱の期限切れメールを自動パージする。</summary>
-    Private Sub PurgeExpiredTrashOnStartup()
+    Private Sub PurgeExpiredTrash()
         Dim days As Integer = _settings.TrashAutoDeleteDays
         If days <= 0 Then Return
 
@@ -948,6 +967,48 @@ Public Class MainForm
             listViewContextMenu.Items.Add(purgeMenuItem)
         Else
             listViewContextMenu.Items.Add(deleteMenuItem)
+        End If
+        UpdateTrashFolderColumn()
+    End Sub
+
+    ''' <summary>ゴミ箱表示時に追加列（フォルダ・削除日時・削除予定日時）を追加し、通常表示時に除去する。</summary>
+    Private Sub UpdateTrashFolderColumn()
+        Dim trashColNames() As String = {"colTrashFolder", "colDeletedAt", "colPurgeAt"}
+
+        If _isTrashView Then
+            ' 未追加の列のみ追加
+            For Each colName As String In trashColNames
+                Dim found As Boolean = False
+                For Each col As ColumnHeader In listViewEmails.Columns
+                    If col.Name = colName Then
+                        found = True
+                        Exit For
+                    End If
+                Next
+                If Not found Then
+                    Dim col As New ColumnHeader()
+                    col.Name = colName
+                    Select Case colName
+                        Case "colTrashFolder"
+                            col.Text = "フォルダ"
+                            col.Width = 140
+                        Case "colDeletedAt"
+                            col.Text = "削除日時"
+                            col.Width = 120
+                        Case "colPurgeAt"
+                            col.Text = "削除予定日時"
+                            col.Width = 120
+                    End Select
+                    listViewEmails.Columns.Add(col)
+                End If
+            Next
+        Else
+            ' ゴミ箱用列を除去（逆順で削除）
+            For i As Integer = listViewEmails.Columns.Count - 1 To 0 Step -1
+                If Array.IndexOf(trashColNames, listViewEmails.Columns(i).Name) >= 0 Then
+                    listViewEmails.Columns.RemoveAt(i)
+                End If
+            Next
         End If
     End Sub
 

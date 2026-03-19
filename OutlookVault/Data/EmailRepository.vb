@@ -708,7 +708,7 @@ SELECT last_insert_rowid();"
         ''' <summary>ゴミ箱内のメール一覧を取得する（論理削除済み）。</summary>
         Public Function GetTrashEmails() As List(Of Models.Email)
             Const sql As String =
-                "SELECT id, subject, sender_name, sender_email, received_at, has_attachments, email_size, thread_id FROM emails" &
+                "SELECT id, subject, sender_name, sender_email, received_at, has_attachments, email_size, thread_id, folder_name, deleted_at FROM emails" &
                 " WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC"
 
             Dim result As New List(Of Models.Email)()
@@ -990,6 +990,22 @@ SELECT last_insert_rowid();"
             Dim sizeOrd As Integer = reader.GetOrdinal("email_size")
             If Not reader.IsDBNull(sizeOrd) Then email.EmailSize = reader.GetInt64(sizeOrd)
             email.ThreadId = GetStr(reader, "thread_id")
+            ' folder_name / deleted_at はゴミ箱一覧など一部のクエリでのみ含まれる
+            Try
+                Dim folderOrd As Integer = reader.GetOrdinal("folder_name")
+                If Not reader.IsDBNull(folderOrd) Then email.FolderName = reader.GetString(folderOrd)
+            Catch ex As IndexOutOfRangeException
+            End Try
+            Try
+                Dim deletedOrd As Integer = reader.GetOrdinal("deleted_at")
+                If Not reader.IsDBNull(deletedOrd) Then
+                    Dim deletedParsed As DateTime
+                    If DateTime.TryParse(reader.GetString(deletedOrd), deletedParsed) Then
+                        email.DeletedAt = deletedParsed
+                    End If
+                End If
+            Catch ex As IndexOutOfRangeException
+            End Try
             Return email
         End Function
 

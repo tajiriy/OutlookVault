@@ -63,6 +63,8 @@ Public Class SettingsForm
         UpdateSyncModeControls()
         chkSyncDeletions.Checked = _settings.SyncDeletionsEnabled
 
+        numTrashDays.Value = CDec(Math.Min(CInt(numTrashDays.Maximum), Math.Max(CInt(numTrashDays.Minimum), _settings.TrashAutoDeleteDays)))
+
         chkDefaultHtml.Checked = _settings.DefaultHtmlView
         chkSortAscending.Checked = _settings.ConversationSortAscending
         chkShowImportResult.Checked = _settings.ShowImportResult
@@ -95,6 +97,8 @@ Public Class SettingsForm
         _settings.SyncMode = cboSyncMode.SelectedIndex
         _settings.DiffSyncBufferHours = CInt(numDiffBuffer.Value)
         _settings.SyncDeletionsEnabled = chkSyncDeletions.Checked
+
+        _settings.TrashAutoDeleteDays = CInt(numTrashDays.Value)
 
         _settings.DefaultHtmlView = chkDefaultHtml.Checked
         _settings.ConversationSortAscending = chkSortAscending.Checked

@@ -31,6 +31,7 @@ Namespace Models
         Public Property EmailSize As Long
         Public Property CreatedAt As DateTime
         Public Property UpdatedAt As DateTime
+        Public Property DeletedAt As Nullable(Of DateTime)
 
         ''' <summary>ナビゲーションプロパティ（DB には格納しない）</summary>
         Public Property Attachments As List(Of Attachment)
