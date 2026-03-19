@@ -4,9 +4,9 @@
 
 | ステータス | 件数 |
 |-----------|------|
-| open      | 13   |
+| open      | 11   |
 | in-progress | 0  |
-| done      | 18   |
+| done      | 20   |
 | wontfix   | 1    |
 
 ## カテゴリ
@@ -406,7 +406,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | Medium |
 | カテゴリ | resource-management |
 | ソース | review |
@@ -416,9 +416,9 @@
 
 **内容:** `folder.Items.Count` のメソッドチェーンで一時的に生成された `Outlook.Items` COM オブジェクトが解放されない。
 
-**対策:** `Dim tmpItems = folder.Items` / `Dim count = tmpItems.Count` / `ReleaseComObject(tmpItems)` に分離。
+**対策:** `Dim tmpItems = folder.Items` → `tmpItems.Count` → `Marshal.ReleaseComObject(tmpItems)` に分離して明示解放。
 
-**メモ:** なし
+**メモ:** 修正日: 2026-03-19
 
 ---
 
@@ -426,7 +426,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | Medium |
 | カテゴリ | performance |
 | ソース | review |
@@ -436,9 +436,9 @@
 
 **内容:** `Sanitize` メソッド内の全 `Regex.Replace` 呼び出し（7箇所）が静的メソッドで呼び出しのたびにコンパイルされる。
 
-**対策:** 全パターンを `Private Shared ReadOnly` フィールドとして `RegexOptions.Compiled` でキャッシュ。
+**対策:** ブロックタグ用ペア/自己閉じパターンを `Dictionary(Of String, Regex)` で Compiled キャッシュ。他5パターンも `Private Shared ReadOnly` フィールドに昇格。Sanitize メソッドはフィールド参照のみに簡素化。
 
-**メモ:** R-013 と同パターンの改善。
+**メモ:** R-013 と同パターンの改善。修正日: 2026-03-19
 
 ---
 
@@ -682,3 +682,4 @@
 | 2026-03-19 | R-015 | wontfix: COM 密結合で分離コスト高、既存テスト 215 件で十分カバー |
 | 2026-03-19 | R-017〜R-032 | 2回目の code-reviewer レビューから 16 件を一括登録 |
 | 2026-03-19 | R-017, R-018, R-019 | done: COM 二重解放修正、Items 解放漏れ修正、BeginBulk 例外処理追加 |
+| 2026-03-19 | R-020, R-021 | done: SyncDeletions Items 解放、HtmlSanitizer Regex Compiled 化 |
