@@ -4,9 +4,9 @@
 
 | ステータス | 件数 |
 |-----------|------|
-| open      | 10   |
+| open      | 8    |
 | in-progress | 0  |
-| done      | 6    |
+| done      | 8    |
 | wontfix   | 0    |
 
 ## カテゴリ
@@ -168,17 +168,17 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | Medium |
 | カテゴリ | error-handling |
 | ソース | review |
 | 対象ファイル | OutlookVault/Services/OutlookService.vb |
 | 登録日 | 2026-03-19 |
-| 修正日 | - |
+| 修正日 | 2026-03-19 |
 
 **内容:** `GetExcludedFolderEntryIds`、`IsFolderHidden`、`GetContainerClass`、`GetMAPIString`、`ResolveExchangeAddress`、`GetAttachmentContentId` に空 Catch ブロックまたはコメントのみの Catch が存在。Exchange 問い合わせ失敗等の原因追跡が困難。
 
-**対策:** `Catch ex As COMException` で例外型を限定し `Logger.Warn` でログ出力。意図的に無視するケースはコメントで理由を明示。
+**対策:** 全6箇所の空 Catch を修正。`Catch` → `Catch ex As COMException` に例外型を限定し、意図的に無視する理由をコメントで明示。`ResolveExchangeAddress` は `Logger.Warn` でログ出力を追加。
 
 **メモ:** OutlookService.vb 行 117〜122、行 490 等
 
@@ -188,17 +188,17 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | Medium |
 | カテゴリ | error-handling |
 | ソース | review |
 | 対象ファイル | OutlookVault/MainForm.vb |
 | 登録日 | 2026-03-19 |
-| 修正日 | - |
+| 修正日 | 2026-03-19 |
 
 **内容:** `UpdateStatusBarAsync` 内で `GetTotalCount()` と `GetLastImportDate()` の Try-Catch が両方とも空。`UpdateFolderCountsAsync` も同様。DB 接続エラーがユーザーに通知されず原因特定が困難。
 
-**対策:** `Catch ex As Exception` で `Logger.Warn` / `Logger.Error` でログ出力。UI への通知は不要だがログには残す。
+**対策:** 全3箇所の空 Catch を `Catch ex As Exception` + `Services.Logger.Warn(メッセージ & ex.Message)` に変更。UI 通知は不要だがログファイルにエラー情報を記録。
 
 **メモ:** MainForm.vb 行 911〜918、行 854
 
@@ -353,3 +353,4 @@
 | 2026-03-19 | R-004 | done: DeleteSelectedEmails を DeleteEmailsByIds に置き換え |
 | 2026-03-19 | R-001, R-007 | done: OutlookService 全14メソッドの COM オブジェクト解放を一括対応 |
 | 2026-03-19 | R-005 | done: GetFolderCounts で N+1 を 1 クエリに集約 |
+| 2026-03-19 | R-008, R-009 | done: 空 Catch を COMException 限定+コメント明示+Logger.Warn に修正 |

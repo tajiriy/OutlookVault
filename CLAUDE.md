@@ -70,6 +70,7 @@ Windows Forms の標準パターンに従い、Designer.vb とコードビハイ
 - 既存の `InitializeComponent()` のコードパターン（インデント、記述順、コメント形式）に合わせる
 - `SuspendLayout` / `ResumeLayout` の構造を壊さない
 - フィールド宣言（`Friend WithEvents`）を Designer.vb のクラス末尾に追加する
+- **`Dispose` メソッドでコードビハインド (.vb) 側のフィールドを参照しないこと**。VS デザイナーは Designer.vb を単独でパースするため、別ファイルのフィールド参照があるとデザイナーがクラッシュする（コンパイルは通るが設計時エラーになる）。リソース解放が必要な場合はコードビハインドの `FormClosing` イベントで行う
 - 編集後はビルドして壊れていないことを確認する
 
 ### 編集対象外
