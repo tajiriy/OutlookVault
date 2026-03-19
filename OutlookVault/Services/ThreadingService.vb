@@ -172,7 +172,7 @@ Namespace Services
             Do While changed
                 changed = False
                 For Each prefix As String In prefixes
-                    If result.ToLower().StartsWith(prefix) Then
+                    If result.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) Then
                         result = result.Substring(prefix.Length).TrimStart()
                         changed = True
                     End If

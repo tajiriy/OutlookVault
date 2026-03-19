@@ -16,6 +16,11 @@ Namespace Controls
     Public Class EmailPreviewControl
         Inherits System.Windows.Forms.UserControl
 
+        ''' <summary>受信者 JSON パース用の正規表現（コンパイル済みで再利用）。</summary>
+        Private Shared ReadOnly RecipientJsonPattern As New Regex(
+            "\{\s*""name""\s*:\s*""(?<name>[^""]*)""\s*,\s*""email""\s*:\s*""(?<email>[^""]*)""\s*\}",
+            RegexOptions.IgnoreCase Or RegexOptions.Compiled)
+
         Private _currentEmail As Models.Email
         Private _showHtml As Boolean
         Private _canToggle As Boolean
@@ -273,10 +278,7 @@ Namespace Controls
             If Not s.StartsWith("[") Then Return s
 
             ' {"name":"...","email":"..."} オブジェクト形式をパース
-            Dim objPattern As New Regex(
-                "\{\s*""name""\s*:\s*""(?<name>[^""]*)""\s*,\s*""email""\s*:\s*""(?<email>[^""]*)""\s*\}",
-                RegexOptions.IgnoreCase)
-            Dim matches As MatchCollection = objPattern.Matches(s)
+            Dim matches As MatchCollection = RecipientJsonPattern.Matches(s)
 
             If matches.Count > 0 Then
                 Dim parts As New List(Of String)()
