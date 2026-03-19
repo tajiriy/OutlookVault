@@ -876,7 +876,14 @@ SELECT last_insert_rowid();"
             email.Subject = GetStr(reader, "subject")
             email.SenderName = GetStr(reader, "sender_name")
             email.SenderEmail = GetStr(reader, "sender_email")
-            email.ReceivedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("received_at")))
+            Dim receivedStr As String = reader.GetString(reader.GetOrdinal("received_at"))
+            Dim receivedParsed As DateTime
+            If DateTime.TryParse(receivedStr, receivedParsed) Then
+                email.ReceivedAt = receivedParsed
+            Else
+                email.ReceivedAt = DateTime.MinValue
+                Services.Logger.Warn(String.Format("MapEmailSummary: received_at のパースに失敗しました。値=""{0}"", id={1}", receivedStr, email.Id))
+            End If
             email.HasAttachments = reader.GetInt32(reader.GetOrdinal("has_attachments")) = 1
             Dim sizeOrd As Integer = reader.GetOrdinal("email_size")
             If Not reader.IsDBNull(sizeOrd) Then email.EmailSize = reader.GetInt64(sizeOrd)
@@ -901,9 +908,23 @@ SELECT last_insert_rowid();"
             email.BccRecipients = GetStr(reader, "bcc_recipients")
             email.BodyText = GetStr(reader, "body_text")
             email.BodyHtml = GetStr(reader, "body_html")
-            email.ReceivedAt = DateTime.Parse(reader.GetString(reader.GetOrdinal("received_at")))
+            Dim receivedStr2 As String = reader.GetString(reader.GetOrdinal("received_at"))
+            Dim receivedParsed2 As DateTime
+            If DateTime.TryParse(receivedStr2, receivedParsed2) Then
+                email.ReceivedAt = receivedParsed2
+            Else
+                email.ReceivedAt = DateTime.MinValue
+                Services.Logger.Warn(String.Format("MapEmail: received_at のパースに失敗しました。値=""{0}"", id={1}", receivedStr2, email.Id))
+            End If
             Dim sentStr As String = GetStr(reader, "sent_at")
-            If Not String.IsNullOrEmpty(sentStr) Then email.SentAt = DateTime.Parse(sentStr)
+            If Not String.IsNullOrEmpty(sentStr) Then
+                Dim sentParsed As DateTime
+                If DateTime.TryParse(sentStr, sentParsed) Then
+                    email.SentAt = sentParsed
+                Else
+                    Services.Logger.Warn(String.Format("MapEmail: sent_at のパースに失敗しました。値=""{0}"", id={1}", sentStr, email.Id))
+                End If
+            End If
             email.FolderName = GetStr(reader, "folder_name")
             email.HasAttachments = reader.GetInt32(reader.GetOrdinal("has_attachments")) = 1
             Dim sizeOrd As Integer = reader.GetOrdinal("email_size")
