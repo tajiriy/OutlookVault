@@ -131,23 +131,8 @@ Namespace Services
             End If
 
             ' ── 差分スキャン: Restrict フィルタで対象を絞る ──────────────
-            Dim items As Outlook.Items
-            If useDiffScan Then
-                Dim syncState As Models.FolderSyncState = _repo.GetFolderSyncState(folderName)
-                If syncState IsNot Nothing AndAlso syncState.FullSyncDone Then
-                    Dim sinceDate As DateTime = syncState.LastSyncTime.AddHours(-_settings.DiffSyncBufferHours)
-                    Dim filter As String = "[ReceivedTime] >= '" & sinceDate.ToString("yyyy/MM/dd HH:mm") & "'"
-                    items = folder.Items.Restrict(filter)
-                    Logger.Info(String.Format("フォルダ '{0}' を差分スキャンします（基準日時: {1}）", folderName, sinceDate.ToString("yyyy/MM/dd HH:mm")))
-                Else
-                    ' 完全同期が未完了の場合はフルスキャンにフォールバック
-                    items = folder.Items
-                    useDiffScan = False
-                    Logger.Info(String.Format("フォルダ '{0}' は完全同期が未完了のためフルスキャンを実行します", folderName))
-                End If
-            Else
-                items = folder.Items
-            End If
+            Dim items As Outlook.Items = Nothing
+            BuildItemsCollection(folder, folderName, useDiffScan, items)
 
             Dim totalCount As Integer = items.Count
             Logger.Info(String.Format("フォルダ '{0}' の取り込みを開始します（{1}件）", folderName, totalCount))
@@ -217,29 +202,7 @@ Namespace Services
                             End If
                         End If
                     Catch ex As Exception
-                        result.ErrorCount += 1
-                        Dim errMsgId As String = ""
-                        Try
-                            errMsgId = _outlookSvc.ExtractMessageId(mailItem)
-                        Catch
-                        End Try
-                        Dim errReceivedDate As DateTime? = Nothing
-                        Dim errSenderName As String = ""
-                        Try
-                            errReceivedDate = mailItem.ReceivedTime
-                            errSenderName = mailItem.SenderName
-                        Catch
-                        End Try
-                        result.Errors.Add(New ImportErrorEntry(folderName, errMsgId, subject, ex.Message, errReceivedDate, errSenderName))
-                        Logger.Error(String.Format("メール取り込みエラー — フォルダ: {0}, 件名: {1}", folderName, subject), ex)
-                        ' エラーになったメールを次回以降スキップ対象に登録
-                        If Not String.IsNullOrEmpty(errMsgId) Then
-                            Try
-                                _repo.InsertErrorMessageId(errMsgId, folderName, subject, ex.Message, errReceivedDate, errSenderName)
-                                errorIds.Add(errMsgId)
-                            Catch
-                            End Try
-                        End If
+                        HandleMailItemError(mailItem, folderName, subject, ex, errorIds, result)
                     End Try
 
                     ' 進捗通知
@@ -256,22 +219,8 @@ Namespace Services
                 ' 残分をコミット
                 _repo.CommitBulk()
 
-                ' ── フォルダ同期状態を更新 ─────────────────────────────
-                Dim reachedMax As Boolean = (result.ImportedCount >= maxCount)
-                If Not useDiffScan Then
-                    ' フルスキャンの場合: maxCount に達していなければ完全同期完了
-                    _repo.UpdateFolderSyncState(folderName, DateTime.Now, Not reachedMax)
-                Else
-                    ' 差分スキャンの場合: 同期日時のみ更新（full_sync_done は維持）
-                    _repo.UpdateFolderSyncState(folderName, DateTime.Now, True)
-                End If
-
-                Dim logMsg As String = String.Format("フォルダ '{0}' の取り込みが完了しました — 新規: {1}件, スキップ: {2}件, エラー: {3}件",
-                    folderName, result.ImportedCount, result.SkippedCount, result.ErrorCount)
-                If result.ErrorSkipCount > 0 Then
-                    logMsg &= String.Format(", エラー除外: {0}件", result.ErrorSkipCount)
-                End If
-                Logger.Info(logMsg)
+                UpdateSyncState(folderName, useDiffScan, result.ImportedCount >= maxCount)
+                LogImportResult(folderName, result)
 
             Catch ex As OperationCanceledException
                 _repo.RollbackBulk()
@@ -293,6 +242,76 @@ Namespace Services
 
             Return result
         End Function
+
+        ' ── ImportFolder サブメソッド ──────────────────────────────
+
+        ''' <summary>差分スキャンまたはフルスキャンに応じた Items コレクションを構築する。</summary>
+        Private Sub BuildItemsCollection(folder As Outlook.MAPIFolder, folderName As String,
+                                          ByRef useDiffScan As Boolean, ByRef items As Outlook.Items)
+            If useDiffScan Then
+                Dim syncState As Models.FolderSyncState = _repo.GetFolderSyncState(folderName)
+                If syncState IsNot Nothing AndAlso syncState.FullSyncDone Then
+                    Dim sinceDate As DateTime = syncState.LastSyncTime.AddHours(-_settings.DiffSyncBufferHours)
+                    Dim filter As String = "[ReceivedTime] >= '" & sinceDate.ToString("yyyy/MM/dd HH:mm") & "'"
+                    items = folder.Items.Restrict(filter)
+                    Logger.Info(String.Format("フォルダ '{0}' を差分スキャンします（基準日時: {1}）", folderName, sinceDate.ToString("yyyy/MM/dd HH:mm")))
+                Else
+                    items = folder.Items
+                    useDiffScan = False
+                    Logger.Info(String.Format("フォルダ '{0}' は完全同期が未完了のためフルスキャンを実行します", folderName))
+                End If
+            Else
+                items = folder.Items
+            End If
+        End Sub
+
+        ''' <summary>個別メールの取り込みエラーを処理し、エラー情報を記録する。</summary>
+        Private Sub HandleMailItemError(mailItem As Outlook.MailItem, folderName As String,
+                                         subject As String, ex As Exception,
+                                         errorIds As HashSet(Of String), result As ImportResult)
+            result.ErrorCount += 1
+            Dim errMsgId As String = ""
+            Try
+                errMsgId = _outlookSvc.ExtractMessageId(mailItem)
+            Catch
+            End Try
+            Dim errReceivedDate As DateTime? = Nothing
+            Dim errSenderName As String = ""
+            Try
+                errReceivedDate = mailItem.ReceivedTime
+                errSenderName = mailItem.SenderName
+            Catch
+            End Try
+            result.Errors.Add(New ImportErrorEntry(folderName, errMsgId, subject, ex.Message, errReceivedDate, errSenderName))
+            Logger.Error(String.Format("メール取り込みエラー — フォルダ: {0}, 件名: {1}", folderName, subject), ex)
+            ' エラーになったメールを次回以降スキップ対象に登録
+            If Not String.IsNullOrEmpty(errMsgId) Then
+                Try
+                    _repo.InsertErrorMessageId(errMsgId, folderName, subject, ex.Message, errReceivedDate, errSenderName)
+                    errorIds.Add(errMsgId)
+                Catch
+                End Try
+            End If
+        End Sub
+
+        ''' <summary>フォルダの同期状態を更新する。</summary>
+        Private Sub UpdateSyncState(folderName As String, useDiffScan As Boolean, reachedMax As Boolean)
+            If Not useDiffScan Then
+                _repo.UpdateFolderSyncState(folderName, DateTime.Now, Not reachedMax)
+            Else
+                _repo.UpdateFolderSyncState(folderName, DateTime.Now, True)
+            End If
+        End Sub
+
+        ''' <summary>取り込み結果をログに出力する。</summary>
+        Private Shared Sub LogImportResult(folderName As String, result As ImportResult)
+            Dim logMsg As String = String.Format("フォルダ '{0}' の取り込みが完了しました — 新規: {1}件, スキップ: {2}件, エラー: {3}件",
+                folderName, result.ImportedCount, result.SkippedCount, result.ErrorCount)
+            If result.ErrorSkipCount > 0 Then
+                logMsg &= String.Format(", エラー除外: {0}件", result.ErrorSkipCount)
+            End If
+            Logger.Info(logMsg)
+        End Sub
 
         ''' <summary>複数フォルダをまとめて取り込む。</summary>
         ''' <param name="fullScan">True の場合は設定に関わらずフルスキャンを実行する。</param>
