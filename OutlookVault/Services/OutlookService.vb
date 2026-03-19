@@ -89,16 +89,34 @@ Namespace Services
 
             Dim result As New List(Of String)()
             Dim stores As Outlook.Stores = _ns.Stores
-            For i As Integer = 1 To stores.Count
-                Dim store As Outlook.Store = stores.Item(i)
-                Dim root As Outlook.MAPIFolder = store.GetRootFolder()
-                ' ルートフォルダ（ストア名）は除外し、サブフォルダのみ収集
-                Dim subFolders As Outlook.Folders = root.Folders
-                For j As Integer = 1 To subFolders.Count
-                    Dim childFolder As Outlook.MAPIFolder = CType(subFolders.Item(j), Outlook.MAPIFolder)
-                    CollectFolderNames(childFolder, result, excludedIds)
+            Try
+                For i As Integer = 1 To stores.Count
+                    Dim store As Outlook.Store = stores.Item(i)
+                    Dim root As Outlook.MAPIFolder = Nothing
+                    Try
+                        root = store.GetRootFolder()
+                        ' ルートフォルダ（ストア名）は除外し、サブフォルダのみ収集
+                        Dim subFolders As Outlook.Folders = root.Folders
+                        Try
+                            For j As Integer = 1 To subFolders.Count
+                                Dim childFolder As Outlook.MAPIFolder = CType(subFolders.Item(j), Outlook.MAPIFolder)
+                                Try
+                                    CollectFolderNames(childFolder, result, excludedIds)
+                                Finally
+                                    Marshal.ReleaseComObject(childFolder)
+                                End Try
+                            Next
+                        Finally
+                            Marshal.ReleaseComObject(subFolders)
+                        End Try
+                    Finally
+                        If root IsNot Nothing Then Marshal.ReleaseComObject(root)
+                        Marshal.ReleaseComObject(store)
+                    End Try
                 Next
-            Next
+            Finally
+                Marshal.ReleaseComObject(stores)
+            End Try
             Return result
         End Function
 
@@ -116,7 +134,13 @@ Namespace Services
             For Each folderType As Outlook.OlDefaultFolders In excludedTypes
                 Try
                     Dim f As Outlook.MAPIFolder = _ns.GetDefaultFolder(folderType)
-                    If f IsNot Nothing Then ids.Add(f.EntryID)
+                    If f IsNot Nothing Then
+                        Try
+                            ids.Add(f.EntryID)
+                        Finally
+                            Marshal.ReleaseComObject(f)
+                        End Try
+                    End If
                 Catch
                 End Try
             Next
@@ -134,18 +158,30 @@ Namespace Services
                 result.Add(folder.Name)
             End If
             Dim subFolders As Outlook.Folders = folder.Folders
-            For i As Integer = 1 To subFolders.Count
-                Dim childFolder As Outlook.MAPIFolder = CType(subFolders.Item(i), Outlook.MAPIFolder)
-                CollectFolderNames(childFolder, result, excludedIds)
-            Next
+            Try
+                For i As Integer = 1 To subFolders.Count
+                    Dim childFolder As Outlook.MAPIFolder = CType(subFolders.Item(i), Outlook.MAPIFolder)
+                    Try
+                        CollectFolderNames(childFolder, result, excludedIds)
+                    Finally
+                        Marshal.ReleaseComObject(childFolder)
+                    End Try
+                Next
+            Finally
+                Marshal.ReleaseComObject(subFolders)
+            End Try
         End Sub
 
         ''' <summary>フォルダが隠し属性（PR_ATTR_HIDDEN）を持つかどうかを返す。</summary>
         Private Shared Function IsFolderHidden(folder As Outlook.MAPIFolder) As Boolean
             Try
                 Dim pa As Outlook.PropertyAccessor = folder.PropertyAccessor
-                Dim val As Object = pa.GetProperty(PropAttrHidden)
-                If TypeOf val Is Boolean Then Return CBool(val)
+                Try
+                    Dim val As Object = pa.GetProperty(PropAttrHidden)
+                    If TypeOf val Is Boolean Then Return CBool(val)
+                Finally
+                    Marshal.ReleaseComObject(pa)
+                End Try
             Catch
             End Try
             Return False
@@ -155,8 +191,12 @@ Namespace Services
         Private Shared Function GetContainerClass(folder As Outlook.MAPIFolder) As String
             Try
                 Dim pa As Outlook.PropertyAccessor = folder.PropertyAccessor
-                Dim val As Object = pa.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x3613001F")
-                If val IsNot Nothing AndAlso TypeOf val Is String Then Return CStr(val)
+                Try
+                    Dim val As Object = pa.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x3613001F")
+                    If val IsNot Nothing AndAlso TypeOf val Is String Then Return CStr(val)
+                Finally
+                    Marshal.ReleaseComObject(pa)
+                End Try
             Catch
             End Try
             Return String.Empty
@@ -165,23 +205,49 @@ Namespace Services
         ''' <summary>フォルダ名でフォルダを検索して返す。見つからない場合は Nothing。</summary>
         Public Function FindFolder(folderName As String) As Outlook.MAPIFolder
             Dim stores As Outlook.Stores = _ns.Stores
-            For i As Integer = 1 To stores.Count
-                Dim store As Outlook.Store = stores.Item(i)
-                Dim root As Outlook.MAPIFolder = store.GetRootFolder()
-                Dim found As Outlook.MAPIFolder = SearchFolder(root, folderName)
-                If found IsNot Nothing Then Return found
-            Next
+            Try
+                For i As Integer = 1 To stores.Count
+                    Dim store As Outlook.Store = stores.Item(i)
+                    Dim root As Outlook.MAPIFolder = Nothing
+                    Try
+                        root = store.GetRootFolder()
+                        Dim found As Outlook.MAPIFolder = SearchFolder(root, folderName)
+                        If found IsNot Nothing Then
+                            ' found を返すのでここでは root/store の解放のみ
+                            ' ※ found が root 自身の場合は解放しない
+                            If found IsNot root Then Marshal.ReleaseComObject(root)
+                            Marshal.ReleaseComObject(store)
+                            Marshal.ReleaseComObject(stores)
+                            Return found
+                        End If
+                    Finally
+                        If root IsNot Nothing Then Marshal.ReleaseComObject(root)
+                        Marshal.ReleaseComObject(store)
+                    End Try
+                Next
+            Finally
+                Marshal.ReleaseComObject(stores)
+            End Try
             Return Nothing
         End Function
 
         Private Function SearchFolder(folder As Outlook.MAPIFolder, name As String) As Outlook.MAPIFolder
             If folder.Name = name Then Return folder
             Dim subFolders As Outlook.Folders = folder.Folders
-            For i As Integer = 1 To subFolders.Count
-                Dim childFolder As Outlook.MAPIFolder = CType(subFolders.Item(i), Outlook.MAPIFolder)
-                Dim found As Outlook.MAPIFolder = SearchFolder(childFolder, name)
-                If found IsNot Nothing Then Return found
-            Next
+            Try
+                For i As Integer = 1 To subFolders.Count
+                    Dim childFolder As Outlook.MAPIFolder = CType(subFolders.Item(i), Outlook.MAPIFolder)
+                    Dim found As Outlook.MAPIFolder = SearchFolder(childFolder, name)
+                    If found IsNot Nothing Then
+                        ' found を返すので childFolder は解放しない（found 自体の可能性がある）
+                        If found IsNot childFolder Then Marshal.ReleaseComObject(childFolder)
+                        Return found
+                    End If
+                    Marshal.ReleaseComObject(childFolder)
+                Next
+            Finally
+                Marshal.ReleaseComObject(subFolders)
+            End Try
             Return Nothing
         End Function
 
@@ -189,7 +255,13 @@ Namespace Services
         Public Function GetMailItemCount(folderName As String) As Integer
             Dim folder As Outlook.MAPIFolder = FindFolder(folderName)
             If folder Is Nothing Then Return 0
-            Return folder.Items.Count
+            Dim items As Outlook.Items = folder.Items
+            Try
+                Return items.Count
+            Finally
+                Marshal.ReleaseComObject(items)
+                Marshal.ReleaseComObject(folder)
+            End Try
         End Function
 
         ' ════════════════════════════════════════════════════════════
@@ -204,25 +276,33 @@ Namespace Services
                                             Optional progress As IProgress(Of Integer) = Nothing) As HashSet(Of String)
             Dim result As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
             Dim items As Outlook.Items = folder.Items
-            Dim totalCount As Integer = items.Count
+            Try
+                Dim totalCount As Integer = items.Count
 
-            For i As Integer = 1 To totalCount
-                Dim rawItem As Object = items.Item(i)
-                If TypeOf rawItem Is Outlook.MailItem Then
-                    Dim mailItem As Outlook.MailItem = CType(rawItem, Outlook.MailItem)
+                For i As Integer = 1 To totalCount
+                    Dim rawItem As Object = items.Item(i)
                     Try
-                        Dim messageId As String = ExtractMessageId(mailItem)
-                        If Not String.IsNullOrEmpty(messageId) Then
-                            result.Add(messageId)
+                        If TypeOf rawItem Is Outlook.MailItem Then
+                            Dim mailItem As Outlook.MailItem = CType(rawItem, Outlook.MailItem)
+                            Try
+                                Dim messageId As String = ExtractMessageId(mailItem)
+                                If Not String.IsNullOrEmpty(messageId) Then
+                                    result.Add(messageId)
+                                End If
+                            Catch
+                                ' 個別メールの MessageID 取得エラーはスキップ
+                            End Try
                         End If
-                    Catch
-                        ' 個別メールの MessageID 取得エラーはスキップ
+                    Finally
+                        Marshal.ReleaseComObject(rawItem)
                     End Try
-                End If
-                If progress IsNot Nothing AndAlso i Mod 100 = 0 Then
-                    progress.Report(i)
-                End If
-            Next
+                    If progress IsNot Nothing AndAlso i Mod 100 = 0 Then
+                        progress.Report(i)
+                    End If
+                Next
+            Finally
+                Marshal.ReleaseComObject(items)
+            End Try
 
             Return result
         End Function
@@ -238,19 +318,22 @@ Namespace Services
         ''' </summary>
         Public Function ExtractMessageId(mailItem As Outlook.MailItem) As String
             Dim pa As Outlook.PropertyAccessor = mailItem.PropertyAccessor
-
-            Dim messageId As String = CleanMessageId(GetMAPIString(pa, PropMessageId))
-            If Not String.IsNullOrEmpty(messageId) Then Return messageId
-
-            ' MAPI で取れなかった場合はトランスポートヘッダーから補完
-            Dim transportHeaders As String = GetMAPIString(pa, PropTransportHeaders)
-            If Not String.IsNullOrEmpty(transportHeaders) Then
-                messageId = CleanMessageId(ParseHeaderField(transportHeaders, "Message-ID"))
+            Try
+                Dim messageId As String = CleanMessageId(GetMAPIString(pa, PropMessageId))
                 If Not String.IsNullOrEmpty(messageId) Then Return messageId
-            End If
 
-            ' MessageId が取れない場合は EntryID を代替として使用
-            Return "entryid:" & mailItem.EntryID
+                ' MAPI で取れなかった場合はトランスポートヘッダーから補完
+                Dim transportHeaders As String = GetMAPIString(pa, PropTransportHeaders)
+                If Not String.IsNullOrEmpty(transportHeaders) Then
+                    messageId = CleanMessageId(ParseHeaderField(transportHeaders, "Message-ID"))
+                    If Not String.IsNullOrEmpty(messageId) Then Return messageId
+                End If
+
+                ' MessageId が取れない場合は EntryID を代替として使用
+                Return "entryid:" & mailItem.EntryID
+            Finally
+                Marshal.ReleaseComObject(pa)
+            End Try
         End Function
 
         ''' <summary>
@@ -261,26 +344,30 @@ Namespace Services
 
             ' ── MAPI プロパティ ──────────────────────────────────
             Dim pa As Outlook.PropertyAccessor = mailItem.PropertyAccessor
-            Dim transportHeaders As String = GetMAPIString(pa, PropTransportHeaders)
+            Try
+                Dim transportHeaders As String = GetMAPIString(pa, PropTransportHeaders)
 
-            email.MessageId = CleanMessageId(GetMAPIString(pa, PropMessageId))
-            email.InReplyTo = CleanMessageId(GetMAPIString(pa, PropInReplyTo))
+                email.MessageId = CleanMessageId(GetMAPIString(pa, PropMessageId))
+                email.InReplyTo = CleanMessageId(GetMAPIString(pa, PropInReplyTo))
 
-            ' MAPI で取れなかった場合はトランスポートヘッダーから補完
-            If Not String.IsNullOrEmpty(transportHeaders) Then
+                ' MAPI で取れなかった場合はトランスポートヘッダーから補完
+                If Not String.IsNullOrEmpty(transportHeaders) Then
+                    If String.IsNullOrEmpty(email.MessageId) Then
+                        email.MessageId = CleanMessageId(ParseHeaderField(transportHeaders, "Message-ID"))
+                    End If
+                    If String.IsNullOrEmpty(email.InReplyTo) Then
+                        email.InReplyTo = CleanMessageId(ParseHeaderField(transportHeaders, "In-Reply-To"))
+                    End If
+                    email.References = ParseHeaderField(transportHeaders, "References")
+                End If
+
+                ' MessageId が取れない場合は EntryID を代替として使用
                 If String.IsNullOrEmpty(email.MessageId) Then
-                    email.MessageId = CleanMessageId(ParseHeaderField(transportHeaders, "Message-ID"))
+                    email.MessageId = "entryid:" & mailItem.EntryID
                 End If
-                If String.IsNullOrEmpty(email.InReplyTo) Then
-                    email.InReplyTo = CleanMessageId(ParseHeaderField(transportHeaders, "In-Reply-To"))
-                End If
-                email.References = ParseHeaderField(transportHeaders, "References")
-            End If
-
-            ' MessageId が取れない場合は EntryID を代替として使用
-            If String.IsNullOrEmpty(email.MessageId) Then
-                email.MessageId = "entryid:" & mailItem.EntryID
-            End If
+            Finally
+                Marshal.ReleaseComObject(pa)
+            End Try
 
             ' ── 件名 ────────────────────────────────────────────
             email.EntryId = mailItem.EntryID
@@ -293,9 +380,13 @@ Namespace Services
 
             ' ── 受信者 ──────────────────────────────────────────
             Dim recipients As Outlook.Recipients = mailItem.Recipients
-            email.ToRecipients = SerializeRecipients(recipients, Outlook.OlMailRecipientType.olTo)
-            email.CcRecipients = SerializeRecipients(recipients, Outlook.OlMailRecipientType.olCC)
-            email.BccRecipients = SerializeRecipients(recipients, Outlook.OlMailRecipientType.olBCC)
+            Try
+                email.ToRecipients = SerializeRecipients(recipients, Outlook.OlMailRecipientType.olTo)
+                email.CcRecipients = SerializeRecipients(recipients, Outlook.OlMailRecipientType.olCC)
+                email.BccRecipients = SerializeRecipients(recipients, Outlook.OlMailRecipientType.olBCC)
+            Finally
+                Marshal.ReleaseComObject(recipients)
+            End Try
 
             ' ── 本文 ────────────────────────────────────────────
             email.BodyText = mailItem.Body
@@ -308,27 +399,41 @@ Namespace Services
             If sentOn > DateTime.MinValue Then email.SentAt = sentOn
 
             ' ── フォルダ名 ──────────────────────────────────────
-            Dim parentFolder As Outlook.MAPIFolder =
-                TryCast(mailItem.Parent, Outlook.MAPIFolder)
-            email.FolderName = If(parentFolder IsNot Nothing, parentFolder.Name, Nothing)
+            Dim parentObj As Object = mailItem.Parent
+            Dim parentFolder As Outlook.MAPIFolder = TryCast(parentObj, Outlook.MAPIFolder)
+            If parentFolder IsNot Nothing Then
+                email.FolderName = parentFolder.Name
+                Marshal.ReleaseComObject(parentFolder)
+            Else
+                email.FolderName = Nothing
+                If parentObj IsNot Nothing Then Marshal.ReleaseComObject(parentObj)
+            End If
 
             ' ── 添付ファイル（OLE 埋め込みを除いた実ファイル数でフラグを設定）──────
             ' ContentID の取得は SaveAttachments で行うため、ここでは OLE のみ除外する。
             ' インライン画像を含む場合も HasAttachments = True になるが、
             ' 添付パネルには IsInline=False のもののみ表示されるため実害はない。
             Dim mailAtts As Outlook.Attachments = mailItem.Attachments
-            If mailAtts.Count = 0 Then
-                email.HasAttachments = False
-            Else
-                Dim realAttachCount As Integer = 0
-                For attIdx As Integer = 1 To mailAtts.Count
-                    Dim a As Outlook.Attachment = CType(mailAtts.Item(attIdx), Outlook.Attachment)
-                    If a.Type <> Outlook.OlAttachmentType.olOLE Then
-                        realAttachCount += 1
-                    End If
-                Next
-                email.HasAttachments = realAttachCount > 0
-            End If
+            Try
+                If mailAtts.Count = 0 Then
+                    email.HasAttachments = False
+                Else
+                    Dim realAttachCount As Integer = 0
+                    For attIdx As Integer = 1 To mailAtts.Count
+                        Dim a As Outlook.Attachment = CType(mailAtts.Item(attIdx), Outlook.Attachment)
+                        Try
+                            If a.Type <> Outlook.OlAttachmentType.olOLE Then
+                                realAttachCount += 1
+                            End If
+                        Finally
+                            Marshal.ReleaseComObject(a)
+                        End Try
+                    Next
+                    email.HasAttachments = realAttachCount > 0
+                End If
+            Finally
+                Marshal.ReleaseComObject(mailAtts)
+            End Try
 
             ' ── サイズ ──────────────────────────────────────────
             email.EmailSize = mailItem.Size
@@ -351,7 +456,10 @@ Namespace Services
                                         Optional saveErrors As List(Of String) = Nothing) As List(Of Models.Attachment)
             Dim result As New List(Of Models.Attachment)()
             Dim atts As Outlook.Attachments = mailItem.Attachments
-            If atts.Count = 0 Then Return result
+            If atts.Count = 0 Then
+                Marshal.ReleaseComObject(atts)
+                Return result
+            End If
 
             Dim dateStr As String = mailItem.ReceivedTime.ToString("yyyyMMdd_HHmmss")
             Dim shortId As String = GetShortId(mailItem.EntryID)
@@ -361,43 +469,50 @@ Namespace Services
             Dim saveDir As String = Path.GetFullPath(Path.Combine(attachBaseDir, subDir))
             Dim dirCreated As Boolean = False
 
-            For i As Integer = 1 To atts.Count
-                Dim att As Outlook.Attachment = CType(atts.Item(i), Outlook.Attachment)
+            Try
+                For i As Integer = 1 To atts.Count
+                    Dim att As Outlook.Attachment = CType(atts.Item(i), Outlook.Attachment)
+                    Try
+                        ' OLE オブジェクト（埋め込みオブジェクト）はスキップ
+                        If att.Type = Outlook.OlAttachmentType.olOLE Then Continue For
 
-                ' OLE オブジェクト（埋め込みオブジェクト）はスキップ
-                If att.Type = Outlook.OlAttachmentType.olOLE Then Continue For
+                        Dim originalName As String = att.FileName
+                        Dim sanitized As String = SanitizeFileName(originalName)
+                        Dim contentId As String = GetAttachmentContentId(att)
 
-                Dim originalName As String = att.FileName
-                Dim sanitized As String = SanitizeFileName(originalName)
-                Dim contentId As String = GetAttachmentContentId(att)
+                        Try
+                            ' 保存先ディレクトリを初回ファイル保存直前に作成（空フォルダを残さない）
+                            If Not dirCreated Then
+                                If Not Directory.Exists(saveDir) Then
+                                    Directory.CreateDirectory(saveDir)
+                                End If
+                                dirCreated = True
+                            End If
 
-                Try
-                    ' 保存先ディレクトリを初回ファイル保存直前に作成（空フォルダを残さない）
-                    If Not dirCreated Then
-                        If Not Directory.Exists(saveDir) Then
-                            Directory.CreateDirectory(saveDir)
-                        End If
-                        dirCreated = True
-                    End If
+                            Dim targetPath As String = GetUniqueFilePath(saveDir, sanitized)
+                            att.SaveAsFile(targetPath)
 
-                    Dim targetPath As String = GetUniqueFilePath(saveDir, sanitized)
-                    att.SaveAsFile(targetPath)
-
-                    Dim fi As New FileInfo(targetPath)
-                    Dim model As New Models.Attachment()
-                    model.EmailId = emailId
-                    model.FileName = originalName
-                    model.FilePath = Path.Combine(subDir, Path.GetFileName(targetPath))
-                    model.FileSize = fi.Length
-                    model.ContentId = contentId
-                    model.IsInline = Not String.IsNullOrEmpty(contentId)
-                    result.Add(model)
-                Catch ex As Exception
-                    Dim errMsg As String = "添付保存エラー [" & originalName & "]: " & ex.Message
-                    System.Diagnostics.Debug.WriteLine(errMsg)
-                    If saveErrors IsNot Nothing Then saveErrors.Add(errMsg)
-                End Try
-            Next
+                            Dim fi As New FileInfo(targetPath)
+                            Dim model As New Models.Attachment()
+                            model.EmailId = emailId
+                            model.FileName = originalName
+                            model.FilePath = Path.Combine(subDir, Path.GetFileName(targetPath))
+                            model.FileSize = fi.Length
+                            model.ContentId = contentId
+                            model.IsInline = Not String.IsNullOrEmpty(contentId)
+                            result.Add(model)
+                        Catch ex As Exception
+                            Dim errMsg As String = "添付保存エラー [" & originalName & "]: " & ex.Message
+                            System.Diagnostics.Debug.WriteLine(errMsg)
+                            If saveErrors IsNot Nothing Then saveErrors.Add(errMsg)
+                        End Try
+                    Finally
+                        Marshal.ReleaseComObject(att)
+                    End Try
+                Next
+            Finally
+                Marshal.ReleaseComObject(atts)
+            End Try
 
             Return result
         End Function
@@ -484,8 +599,18 @@ Namespace Services
             Try
                 Dim entry As Outlook.AddressEntry = getAddressEntry()
                 If entry IsNot Nothing Then
-                    Dim exUser As Outlook.ExchangeUser = entry.GetExchangeUser()
-                    If exUser IsNot Nothing Then resolved = exUser.PrimarySmtpAddress
+                    Try
+                        Dim exUser As Outlook.ExchangeUser = entry.GetExchangeUser()
+                        If exUser IsNot Nothing Then
+                            Try
+                                resolved = exUser.PrimarySmtpAddress
+                            Finally
+                                Marshal.ReleaseComObject(exUser)
+                            End Try
+                        End If
+                    Finally
+                        Marshal.ReleaseComObject(entry)
+                    End Try
                 End If
             Catch
             End Try
@@ -502,16 +627,26 @@ Namespace Services
 
             For i As Integer = 1 To recipients.Count
                 Dim r As Outlook.Recipient = recipients.Item(i)
-                If r.Type <> expectedType Then Continue For
+                Try
+                    If r.Type <> expectedType Then Continue For
 
-                Dim emailAddr As String = r.Address
-                ' Exchange アドレスの場合は SMTP アドレスを解決（キャッシュ付き）
-                If r.AddressEntry IsNot Nothing AndAlso r.AddressEntry.Type = "EX" Then
-                    Dim entry As Outlook.AddressEntry = r.AddressEntry
-                    emailAddr = ResolveExchangeAddress(r.Address, Function() entry)
-                End If
+                    Dim emailAddr As String = r.Address
+                    ' Exchange アドレスの場合は SMTP アドレスを解決（キャッシュ付き）
+                    Dim addrEntry As Outlook.AddressEntry = r.AddressEntry
+                    If addrEntry IsNot Nothing Then
+                        Try
+                            If addrEntry.Type = "EX" Then
+                                emailAddr = ResolveExchangeAddress(r.Address, Function() addrEntry)
+                            End If
+                        Finally
+                            Marshal.ReleaseComObject(addrEntry)
+                        End Try
+                    End If
 
-                parts.Add("{""name"":" & JsonStr(r.Name) & ",""email"":" & JsonStr(emailAddr) & "}")
+                    parts.Add("{""name"":" & JsonStr(r.Name) & ",""email"":" & JsonStr(emailAddr) & "}")
+                Finally
+                    Marshal.ReleaseComObject(r)
+                End Try
             Next
 
             Return "[" & String.Join(",", parts) & "]"
@@ -533,15 +668,19 @@ Namespace Services
         Private Shared Function GetAttachmentContentId(att As Outlook.Attachment) As String
             Try
                 Dim pa As Outlook.PropertyAccessor = att.PropertyAccessor
-                Dim val As Object = pa.GetProperty(PropAttachContentId)
-                If val Is Nothing Then Return Nothing
-                If Not TypeOf val Is String Then Return Nothing
-                Dim cid As String = CType(val, String).Trim()
-                ' "<xxx@yyy>" 形式の山括弧を除去して正規化
-                If cid.StartsWith("<") AndAlso cid.EndsWith(">") Then
-                    cid = cid.Substring(1, cid.Length - 2)
-                End If
-                Return If(String.IsNullOrEmpty(cid), Nothing, cid)
+                Try
+                    Dim val As Object = pa.GetProperty(PropAttachContentId)
+                    If val Is Nothing Then Return Nothing
+                    If Not TypeOf val Is String Then Return Nothing
+                    Dim cid As String = CType(val, String).Trim()
+                    ' "<xxx@yyy>" 形式の山括弧を除去して正規化
+                    If cid.StartsWith("<") AndAlso cid.EndsWith(">") Then
+                        cid = cid.Substring(1, cid.Length - 2)
+                    End If
+                    Return If(String.IsNullOrEmpty(cid), Nothing, cid)
+                Finally
+                    Marshal.ReleaseComObject(pa)
+                End Try
             Catch
                 Return Nothing
             End Try
