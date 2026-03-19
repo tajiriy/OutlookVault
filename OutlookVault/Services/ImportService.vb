@@ -102,6 +102,7 @@ Namespace Services
         ''' <summary>
         ''' 指定フォルダのメールを取り込む。
         ''' 設定の ImportOldestFirst に応じて古い順または新しい順でイテレートする。
+        ''' 差分スキャンモードでは Restrict フィルタで対象を絞る。
         ''' </summary>
         ''' <param name="folderName">取り込み対象フォルダの表示名</param>
         ''' <param name="maxCount">今回の最大取り込み件数</param>
@@ -109,6 +110,7 @@ Namespace Services
         ''' <param name="deletedIds">削除済み MessageID のキャッシュ</param>
         ''' <param name="errorIds">エラー除外 MessageID のキャッシュ</param>
         ''' <param name="progress">進捗通知（Nothing の場合は通知しない）</param>
+        ''' <param name="useDiffScan">差分スキャンを使用するか</param>
 
         Public Function ImportFolder(folderName As String,
                                      maxCount As Integer,
@@ -116,7 +118,8 @@ Namespace Services
                                      deletedIds As HashSet(Of String),
                                      errorIds As HashSet(Of String),
                                      Optional progress As IProgress(Of ImportProgress) = Nothing,
-                                     Optional cancellationToken As CancellationToken = Nothing) As ImportResult
+                                     Optional cancellationToken As CancellationToken = Nothing,
+                                     Optional useDiffScan As Boolean = False) As ImportResult
             Dim result As New ImportResult()
 
             Dim folder As Outlook.MAPIFolder = _outlookSvc.FindFolder(folderName)
@@ -127,7 +130,25 @@ Namespace Services
                 Return result
             End If
 
-            Dim items As Outlook.Items = folder.Items
+            ' ── 差分スキャン: Restrict フィルタで対象を絞る ──────────────
+            Dim items As Outlook.Items
+            If useDiffScan Then
+                Dim syncState As Models.FolderSyncState = _repo.GetFolderSyncState(folderName)
+                If syncState IsNot Nothing AndAlso syncState.FullSyncDone Then
+                    Dim sinceDate As DateTime = syncState.LastSyncTime.AddHours(-_settings.DiffSyncBufferHours)
+                    Dim filter As String = "[ReceivedTime] >= '" & sinceDate.ToString("yyyy/MM/dd HH:mm") & "'"
+                    items = folder.Items.Restrict(filter)
+                    Logger.Info(String.Format("フォルダ '{0}' を差分スキャンします（基準日時: {1}）", folderName, sinceDate.ToString("yyyy/MM/dd HH:mm")))
+                Else
+                    ' 完全同期が未完了の場合はフルスキャンにフォールバック
+                    items = folder.Items
+                    useDiffScan = False
+                    Logger.Info(String.Format("フォルダ '{0}' は完全同期が未完了のためフルスキャンを実行します", folderName))
+                End If
+            Else
+                items = folder.Items
+            End If
+
             Dim totalCount As Integer = items.Count
             Logger.Info(String.Format("フォルダ '{0}' の取り込みを開始します（{1}件）", folderName, totalCount))
             result.TotalOutlookCount += totalCount
@@ -235,6 +256,16 @@ Namespace Services
                 ' 残分をコミット
                 _repo.CommitBulk()
 
+                ' ── フォルダ同期状態を更新 ─────────────────────────────
+                Dim reachedMax As Boolean = (result.ImportedCount >= maxCount)
+                If Not useDiffScan Then
+                    ' フルスキャンの場合: maxCount に達していなければ完全同期完了
+                    _repo.UpdateFolderSyncState(folderName, DateTime.Now, Not reachedMax)
+                Else
+                    ' 差分スキャンの場合: 同期日時のみ更新（full_sync_done は維持）
+                    _repo.UpdateFolderSyncState(folderName, DateTime.Now, True)
+                End If
+
                 Dim logMsg As String = String.Format("フォルダ '{0}' の取り込みが完了しました — 新規: {1}件, スキップ: {2}件, エラー: {3}件",
                     folderName, result.ImportedCount, result.SkippedCount, result.ErrorCount)
                 If result.ErrorSkipCount > 0 Then
@@ -264,11 +295,16 @@ Namespace Services
         End Function
 
         ''' <summary>複数フォルダをまとめて取り込む。</summary>
+        ''' <param name="fullScan">True の場合は設定に関わらずフルスキャンを実行する。</param>
         Public Function ImportFolders(folderNames As IEnumerable(Of String),
                                       maxCountPerFolder As Integer,
                                       Optional progress As IProgress(Of ImportProgress) = Nothing,
-                                      Optional cancellationToken As CancellationToken = Nothing) As ImportResult
+                                      Optional cancellationToken As CancellationToken = Nothing,
+                                      Optional fullScan As Boolean = False) As ImportResult
             Dim total As New ImportResult()
+
+            ' 差分スキャンを使用するか判定
+            Dim useDiffScan As Boolean = (Not fullScan) AndAlso (_settings.SyncMode = 1)
 
             ' 全 MessageID を一括キャッシュ（1件ずつ SQL を発行するより大幅に高速）
             Dim existingIds As HashSet(Of String) = _repo.GetAllMessageIds()
@@ -280,7 +316,7 @@ Namespace Services
 
             For Each name As String In folderNames
                 cancellationToken.ThrowIfCancellationRequested()
-                Dim r As ImportResult = ImportFolder(name, maxCountPerFolder, existingIds, deletedIds, errorIds, progress, cancellationToken)
+                Dim r As ImportResult = ImportFolder(name, maxCountPerFolder, existingIds, deletedIds, errorIds, progress, cancellationToken, useDiffScan)
                 total.ImportedCount += r.ImportedCount
                 total.SkippedCount += r.SkippedCount
                 total.ErrorCount += r.ErrorCount

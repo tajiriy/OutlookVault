@@ -128,6 +128,12 @@ Partial Class SettingsForm
         'grpAutoImport
         '
         Me.chkSyncDeletions = New System.Windows.Forms.CheckBox()
+        Me.lblSyncMode = New System.Windows.Forms.Label()
+        Me.cboSyncMode = New System.Windows.Forms.ComboBox()
+        Me.lblDiffBuffer = New System.Windows.Forms.Label()
+        Me.numDiffBuffer = New System.Windows.Forms.NumericUpDown()
+        Me.lblDiffBufferUnit = New System.Windows.Forms.Label()
+        CType(Me.numDiffBuffer, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.grpAutoImport.Controls.Add(Me.chkAutoImportEnabled)
         Me.grpAutoImport.Controls.Add(Me.rdoInterval)
         Me.grpAutoImport.Controls.Add(Me.numInterval)
@@ -137,10 +143,15 @@ Partial Class SettingsForm
         Me.grpAutoImport.Controls.Add(Me.numMaxCount)
         Me.grpAutoImport.Controls.Add(Me.lblImportOrder)
         Me.grpAutoImport.Controls.Add(Me.cboImportOrder)
+        Me.grpAutoImport.Controls.Add(Me.lblSyncMode)
+        Me.grpAutoImport.Controls.Add(Me.cboSyncMode)
+        Me.grpAutoImport.Controls.Add(Me.lblDiffBuffer)
+        Me.grpAutoImport.Controls.Add(Me.numDiffBuffer)
+        Me.grpAutoImport.Controls.Add(Me.lblDiffBufferUnit)
         Me.grpAutoImport.Controls.Add(Me.chkSyncDeletions)
         Me.grpAutoImport.Location = New System.Drawing.Point(8, 110)
         Me.grpAutoImport.Name = "grpAutoImport"
-        Me.grpAutoImport.Size = New System.Drawing.Size(488, 184)
+        Me.grpAutoImport.Size = New System.Drawing.Size(488, 236)
         Me.grpAutoImport.TabIndex = 1
         Me.grpAutoImport.TabStop = False
         Me.grpAutoImport.Text = "自動取り込み"
@@ -231,20 +242,64 @@ Partial Class SettingsForm
         Me.cboImportOrder.Size = New System.Drawing.Size(140, 21)
         Me.cboImportOrder.TabIndex = 6
         '
+        'lblSyncMode
+        '
+        Me.lblSyncMode.AutoSize = True
+        Me.lblSyncMode.Location = New System.Drawing.Point(8, 128)
+        Me.lblSyncMode.Name = "lblSyncMode"
+        Me.lblSyncMode.Size = New System.Drawing.Size(93, 13)
+        Me.lblSyncMode.Text = "同期モード:"
+        '
+        'cboSyncMode
+        '
+        Me.cboSyncMode.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
+        Me.cboSyncMode.FormattingEnabled = True
+        Me.cboSyncMode.Items.AddRange(New Object() {"フルスキャン", "差分スキャン（推奨）"})
+        Me.cboSyncMode.Location = New System.Drawing.Point(180, 125)
+        Me.cboSyncMode.Name = "cboSyncMode"
+        Me.cboSyncMode.Size = New System.Drawing.Size(160, 21)
+        Me.cboSyncMode.TabIndex = 7
+        '
+        'lblDiffBuffer
+        '
+        Me.lblDiffBuffer.AutoSize = True
+        Me.lblDiffBuffer.Location = New System.Drawing.Point(8, 154)
+        Me.lblDiffBuffer.Name = "lblDiffBuffer"
+        Me.lblDiffBuffer.Size = New System.Drawing.Size(144, 13)
+        Me.lblDiffBuffer.Text = "差分スキャンのバッファ:"
+        '
+        'numDiffBuffer
+        '
+        Me.numDiffBuffer.Location = New System.Drawing.Point(180, 151)
+        Me.numDiffBuffer.Maximum = New Decimal(New Integer() {720, 0, 0, 0})
+        Me.numDiffBuffer.Minimum = New Decimal(New Integer() {1, 0, 0, 0})
+        Me.numDiffBuffer.Name = "numDiffBuffer"
+        Me.numDiffBuffer.Size = New System.Drawing.Size(60, 22)
+        Me.numDiffBuffer.TabIndex = 8
+        Me.numDiffBuffer.Value = New Decimal(New Integer() {24, 0, 0, 0})
+        '
+        'lblDiffBufferUnit
+        '
+        Me.lblDiffBufferUnit.AutoSize = True
+        Me.lblDiffBufferUnit.Location = New System.Drawing.Point(244, 154)
+        Me.lblDiffBufferUnit.Name = "lblDiffBufferUnit"
+        Me.lblDiffBufferUnit.Size = New System.Drawing.Size(30, 13)
+        Me.lblDiffBufferUnit.Text = "時間"
+        '
         'chkSyncDeletions
         '
         Me.chkSyncDeletions.AutoSize = True
-        Me.chkSyncDeletions.Location = New System.Drawing.Point(8, 128)
+        Me.chkSyncDeletions.Location = New System.Drawing.Point(8, 180)
         Me.chkSyncDeletions.Name = "chkSyncDeletions"
         Me.chkSyncDeletions.Size = New System.Drawing.Size(380, 17)
-        Me.chkSyncDeletions.TabIndex = 7
+        Me.chkSyncDeletions.TabIndex = 9
         Me.chkSyncDeletions.Text = "Outlook 側で削除されたメールをデータベースからも削除する"
         '
         'grpFolders
         '
         Me.grpFolders.Controls.Add(Me.lstFolders)
         Me.grpFolders.Controls.Add(Me.btnSelectFolders)
-        Me.grpFolders.Location = New System.Drawing.Point(8, 302)
+        Me.grpFolders.Location = New System.Drawing.Point(8, 354)
         Me.grpFolders.Name = "grpFolders"
         Me.grpFolders.Size = New System.Drawing.Size(488, 130)
         Me.grpFolders.TabIndex = 2
@@ -272,7 +327,7 @@ Partial Class SettingsForm
         Me.grpDisplay.Controls.Add(Me.chkDefaultHtml)
         Me.grpDisplay.Controls.Add(Me.chkSortAscending)
         Me.grpDisplay.Controls.Add(Me.chkShowImportResult)
-        Me.grpDisplay.Location = New System.Drawing.Point(8, 440)
+        Me.grpDisplay.Location = New System.Drawing.Point(8, 492)
         Me.grpDisplay.Name = "grpDisplay"
         Me.grpDisplay.Size = New System.Drawing.Size(488, 94)
         Me.grpDisplay.TabIndex = 3
@@ -313,7 +368,7 @@ Partial Class SettingsForm
         Me.grpTray.Controls.Add(Me.chkMinimizeToTray)
         Me.grpTray.Controls.Add(Me.chkCloseToTray)
         Me.grpTray.Controls.Add(Me.chkShowBalloonOnImport)
-        Me.grpTray.Location = New System.Drawing.Point(8, 542)
+        Me.grpTray.Location = New System.Drawing.Point(8, 594)
         Me.grpTray.Name = "grpTray"
         Me.grpTray.Size = New System.Drawing.Size(488, 118)
         Me.grpTray.TabIndex = 6
@@ -359,7 +414,7 @@ Partial Class SettingsForm
         'grpData
         '
         Me.grpData.Controls.Add(Me.btnResetData)
-        Me.grpData.Location = New System.Drawing.Point(8, 668)
+        Me.grpData.Location = New System.Drawing.Point(8, 720)
         Me.grpData.Name = "grpData"
         Me.grpData.Size = New System.Drawing.Size(488, 56)
         Me.grpData.TabIndex = 5
@@ -378,7 +433,7 @@ Partial Class SettingsForm
         '
         Me.pnlButtons.Controls.Add(Me.btnOk)
         Me.pnlButtons.Controls.Add(Me.btnCancel)
-        Me.pnlButtons.Location = New System.Drawing.Point(8, 732)
+        Me.pnlButtons.Location = New System.Drawing.Point(8, 784)
         Me.pnlButtons.Name = "pnlButtons"
         Me.pnlButtons.Size = New System.Drawing.Size(488, 34)
         Me.pnlButtons.TabIndex = 4
@@ -407,7 +462,7 @@ Partial Class SettingsForm
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.Font = New System.Drawing.Font("Meiryo UI", 9.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(128, Byte))
         Me.CancelButton = Me.btnCancel
-        Me.ClientSize = New System.Drawing.Size(512, 776)
+        Me.ClientSize = New System.Drawing.Size(512, 828)
         Me.Controls.Add(Me.grpPaths)
         Me.Controls.Add(Me.grpAutoImport)
         Me.Controls.Add(Me.grpFolders)
@@ -427,6 +482,7 @@ Partial Class SettingsForm
         Me.grpAutoImport.PerformLayout()
         CType(Me.numInterval, System.ComponentModel.ISupportInitialize).EndInit()
         CType(Me.numMaxCount, System.ComponentModel.ISupportInitialize).EndInit()
+        CType(Me.numDiffBuffer, System.ComponentModel.ISupportInitialize).EndInit()
         Me.grpFolders.ResumeLayout(False)
         Me.grpDisplay.ResumeLayout(False)
         Me.grpDisplay.PerformLayout()
@@ -455,6 +511,11 @@ Partial Class SettingsForm
     Friend WithEvents numMaxCount As System.Windows.Forms.NumericUpDown
     Friend WithEvents lblImportOrder As System.Windows.Forms.Label
     Friend WithEvents cboImportOrder As System.Windows.Forms.ComboBox
+    Friend WithEvents lblSyncMode As System.Windows.Forms.Label
+    Friend WithEvents cboSyncMode As System.Windows.Forms.ComboBox
+    Friend WithEvents lblDiffBuffer As System.Windows.Forms.Label
+    Friend WithEvents numDiffBuffer As System.Windows.Forms.NumericUpDown
+    Friend WithEvents lblDiffBufferUnit As System.Windows.Forms.Label
     Friend WithEvents grpFolders As System.Windows.Forms.GroupBox
     Friend WithEvents lstFolders As System.Windows.Forms.ListBox
     Friend WithEvents btnSelectFolders As System.Windows.Forms.Button

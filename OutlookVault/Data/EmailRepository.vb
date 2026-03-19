@@ -910,6 +910,48 @@ SELECT last_insert_rowid();"
             Return CType(value, Object)
         End Function
 
+        ' ════════════════════════════════════════════════════════════
+        '  フォルダ同期状態
+        ' ════════════════════════════════════════════════════════════
+
+        ''' <summary>指定フォルダの同期状態を取得する。未登録の場合は Nothing を返す。</summary>
+        Public Function GetFolderSyncState(folderName As String) As Models.FolderSyncState
+            Const sql As String =
+                "SELECT folder_name, last_sync_time, full_sync_done FROM folder_sync_state WHERE folder_name = @folder_name"
+            Using conn As SQLiteConnection = _dbManager.GetConnection()
+                Using cmd As New SQLiteCommand(sql, conn)
+                    cmd.Parameters.AddWithValue("@folder_name", folderName)
+                    Using reader As SQLiteDataReader = cmd.ExecuteReader()
+                        If reader.Read() Then
+                            Dim state As New Models.FolderSyncState()
+                            state.FolderName = reader.GetString(0)
+                            state.LastSyncTime = DateTime.Parse(reader.GetString(1))
+                            state.FullSyncDone = reader.GetInt32(2) = 1
+                            Return state
+                        End If
+                    End Using
+                End Using
+            End Using
+            Return Nothing
+        End Function
+
+        ''' <summary>フォルダの同期状態を更新する（UPSERT）。</summary>
+        Public Sub UpdateFolderSyncState(folderName As String, lastSyncTime As DateTime, fullSyncDone As Boolean)
+            Const sql As String =
+                "INSERT INTO folder_sync_state (folder_name, last_sync_time, full_sync_done, updated_at) " &
+                "VALUES (@folder_name, @last_sync_time, @full_sync_done, datetime('now', 'localtime')) " &
+                "ON CONFLICT(folder_name) DO UPDATE SET " &
+                "last_sync_time = @last_sync_time, full_sync_done = @full_sync_done, updated_at = datetime('now', 'localtime')"
+            Using conn As SQLiteConnection = _dbManager.GetConnection()
+                Using cmd As New SQLiteCommand(sql, conn)
+                    cmd.Parameters.AddWithValue("@folder_name", folderName)
+                    cmd.Parameters.AddWithValue("@last_sync_time", lastSyncTime.ToString("yyyy-MM-dd HH:mm:ss"))
+                    cmd.Parameters.AddWithValue("@full_sync_done", If(fullSyncDone, 1, 0))
+                    cmd.ExecuteNonQuery()
+                End Using
+            End Using
+        End Sub
+
     End Class
 
 End Namespace

@@ -126,6 +126,28 @@ Namespace Config
             End Set
         End Property
 
+        ' ── 同期モード ──────────────────────────────────────────────
+
+        ''' <summary>同期モード（0: フルスキャン, 1: 差分スキャン）</summary>
+        Public Property SyncMode As Integer
+            Get
+                Return GetInt("SyncMode", defaultValue:=1)
+            End Get
+            Set(value As Integer)
+                SaveSetting("SyncMode", value.ToString())
+            End Set
+        End Property
+
+        ''' <summary>差分スキャン時のバッファ時間（時間単位）</summary>
+        Public Property DiffSyncBufferHours As Integer
+            Get
+                Return GetInt("DiffSyncBufferHours", defaultValue:=24)
+            End Get
+            Set(value As Integer)
+                SaveSetting("DiffSyncBufferHours", value.ToString())
+            End Set
+        End Property
+
         ' ── 削除同期 ────────────────────────────────────────────────
 
         ''' <summary>取り込み時に Outlook 側で削除されたメールをデータベースからも削除するか</summary>

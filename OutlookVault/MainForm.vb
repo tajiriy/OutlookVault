@@ -408,7 +408,7 @@ Public Class MainForm
                         Using outlookSvc As Services.OutlookService = Services.OutlookService.Connect()
                             Dim threadingSvc As New Services.ThreadingService(repo)
                             Dim importSvc As New Services.ImportService(outlookSvc, repo, threadingSvc, settings, dbManager)
-                            Dim importResult As Services.ImportResult = importSvc.ImportFolders(targetFolders, maxCount, progress, ct)
+                            Dim importResult As Services.ImportResult = importSvc.ImportFolders(targetFolders, maxCount, progress, ct, fullSync)
 
                             ' 削除同期
                             If syncDeletions Then

@@ -143,6 +143,7 @@
     </Compile>
     <Compile Include="Models\Attachment.vb" />
     <Compile Include="Models\Email.vb" />
+    <Compile Include="Models\FolderSyncState.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="My Project\Application.Designer.vb">
       <AutoGen>True</AutoGen>

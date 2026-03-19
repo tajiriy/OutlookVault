@@ -58,6 +58,9 @@ Public Class SettingsForm
         Next
 
         cboImportOrder.SelectedIndex = If(_settings.ImportOldestFirst, 0, 1)
+        cboSyncMode.SelectedIndex = _settings.SyncMode
+        numDiffBuffer.Value = CDec(Math.Min(CInt(numDiffBuffer.Maximum), Math.Max(CInt(numDiffBuffer.Minimum), _settings.DiffSyncBufferHours)))
+        UpdateSyncModeControls()
         chkSyncDeletions.Checked = _settings.SyncDeletionsEnabled
 
         chkDefaultHtml.Checked = _settings.DefaultHtmlView
@@ -88,6 +91,8 @@ Public Class SettingsForm
         _settings.TargetFolders = folders
 
         _settings.ImportOldestFirst = (cboImportOrder.SelectedIndex = 0)
+        _settings.SyncMode = cboSyncMode.SelectedIndex
+        _settings.DiffSyncBufferHours = CInt(numDiffBuffer.Value)
         _settings.SyncDeletionsEnabled = chkSyncDeletions.Checked
 
         _settings.DefaultHtmlView = chkDefaultHtml.Checked
@@ -118,6 +123,22 @@ Public Class SettingsForm
 
     Private Sub rdoScheduled_CheckedChanged(sender As Object, e As System.EventArgs) Handles rdoScheduled.CheckedChanged
         UpdateImportModeControls()
+    End Sub
+
+    ' ════════════════════════════════════════════════════════════
+    '  イベントハンドラ ─ 同期モード
+    ' ════════════════════════════════════════════════════════════
+
+    ''' <summary>同期モードの選択に応じてバッファ設定の有効/無効を切り替える。</summary>
+    Private Sub UpdateSyncModeControls()
+        Dim isDiff As Boolean = (cboSyncMode.SelectedIndex = 1)
+        numDiffBuffer.Enabled = isDiff
+        lblDiffBuffer.Enabled = isDiff
+        lblDiffBufferUnit.Enabled = isDiff
+    End Sub
+
+    Private Sub cboSyncMode_SelectedIndexChanged(sender As Object, e As System.EventArgs) Handles cboSyncMode.SelectedIndexChanged
+        UpdateSyncModeControls()
     End Sub
 
     ' ════════════════════════════════════════════════════════════
