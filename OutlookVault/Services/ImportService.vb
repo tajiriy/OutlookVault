@@ -130,6 +130,7 @@ Namespace Services
                 Return result
             End If
 
+            Try
             ' ── 差分スキャン: Restrict フィルタで対象を絞る ──────────────
             Dim items As Outlook.Items = Nothing
             BuildItemsCollection(folder, folderName, useDiffScan, items)
@@ -253,6 +254,10 @@ Namespace Services
             End Try
 
             Return result
+
+            Finally
+                Runtime.InteropServices.Marshal.ReleaseComObject(folder)
+            End Try
         End Function
 
         ' ── ImportFolder サブメソッド ──────────────────────────────
@@ -382,14 +387,14 @@ Namespace Services
                 Return 0
             End If
 
+            Try
             Logger.Info(String.Format("フォルダ '{0}' の削除同期を開始します", folderName))
 
             ' Outlook 側の全 MessageID を取得（軽量スキャン）
+            ' GetFolderMessageIds が内部で items.Count を取得するので itemCount で受け取る（R-035: folder.Items の2回取得を解消）
+            Dim totalItems As Integer = 0
             Dim scanProgress As IProgress(Of Integer) = Nothing
             If progress IsNot Nothing Then
-                Dim tmpItems As Outlook.Items = folder.Items
-                Dim totalItems As Integer = tmpItems.Count
-                Runtime.InteropServices.Marshal.ReleaseComObject(tmpItems)
                 Dim fname As String = folderName
                 scanProgress = New Progress(Of Integer)(
                     Sub(scanned As Integer)
@@ -401,7 +406,7 @@ Namespace Services
                     End Sub)
             End If
 
-            Dim outlookIds As HashSet(Of String) = _outlookSvc.GetFolderMessageIds(folder, scanProgress)
+            Dim outlookIds As HashSet(Of String) = _outlookSvc.GetFolderMessageIds(folder, scanProgress, totalItems)
 
             ' DB 側のフォルダ内メールを取得
             Dim archivedEmails As Dictionary(Of String, Integer) = _repo.GetMessageIdsByFolder(folderName)
@@ -435,6 +440,10 @@ Namespace Services
 
             Logger.Info(String.Format("フォルダ '{0}' の削除同期が完了しました — {1}件削除", folderName, idsToDelete.Count))
             Return idsToDelete.Count
+
+            Finally
+                Runtime.InteropServices.Marshal.ReleaseComObject(folder)
+            End Try
         End Function
 
         ''' <summary>複数フォルダの削除同期を実行する。</summary>

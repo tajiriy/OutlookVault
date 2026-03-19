@@ -280,11 +280,13 @@ Namespace Services
         ''' Outlook 側で削除されたメールを検出するための突合に使用する。
         ''' </summary>
         Public Function GetFolderMessageIds(folder As Outlook.MAPIFolder,
-                                            Optional progress As IProgress(Of Integer) = Nothing) As HashSet(Of String)
+                                            Optional progress As IProgress(Of Integer) = Nothing,
+                                            Optional ByRef itemCount As Integer = 0) As HashSet(Of String)
             Dim result As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
             Dim items As Outlook.Items = folder.Items
             Try
                 Dim totalCount As Integer = items.Count
+                itemCount = totalCount
 
                 For i As Integer = 1 To totalCount
                     Dim rawItem As Object = items.Item(i)
