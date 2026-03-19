@@ -91,3 +91,17 @@ model: sonnet
 
 ### Good Points
 良い点も 1〜2 件挙げる（コードの改善が見られた箇所など）。
+
+### リファクタリング候補
+Warning / Info 級の指摘のうち、即時修正ではなく後日対応が適切なものを `docs/refactoring_tracker.md` への登録候補として提示する。
+
+各候補を以下の形式で記載：
+
+- **項目名:** 簡潔なタイトル
+- **カテゴリ:** resource-management / sql-safety / winforms / vbnet-convention / performance / error-handling / test-coverage / readability
+- **優先度:** High / Medium / Low
+- **対象ファイル:** パス
+- **内容:** 何を改善すべきか
+- **対策案:** 方針
+
+ユーザーが承認した候補は `/refactor` コマンドで順次対応される。
