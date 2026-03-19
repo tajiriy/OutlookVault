@@ -292,7 +292,7 @@ Namespace Config
         ''' <summary>メール一覧のソート列インデックス（0=添付 1=件名 2=差出人 3=受信日時 4=サイズ）</summary>
         Public Property EmailListSortColumn As Integer
             Get
-                Return GetInt("EmailListSortColumn", defaultValue:=3)
+                Return GetInt("EmailListSortColumn", defaultValue:=CInt(EmailListColumn.ReceivedAt))
             End Get
             Set(value As Integer)
                 SaveSetting("EmailListSortColumn", value.ToString())

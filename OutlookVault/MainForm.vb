@@ -5,6 +5,15 @@ Option Infer Off
 Imports System.Runtime.InteropServices
 Imports System.Threading.Tasks
 
+''' <summary>メール一覧 ListView の列インデックス。</summary>
+Public Enum EmailListColumn As Integer
+    Attachment = 0
+    Subject = 1
+    Sender = 2
+    ReceivedAt = 3
+    Size = 4
+End Enum
+
 Public Class MainForm
 
     ' ════════════════════════════════════════════════════════════
@@ -58,7 +67,7 @@ Public Class MainForm
     Private _loadVersion As Integer             ' LoadEmailsAsync の競合検出用バージョン番号
 
     ' 列インデックス: 0=添付 1=件名 2=差出人 3=受信日時 4=サイズ
-    Private _sortColumn As Integer = 3          ' デフォルト: 受信日時
+    Private _sortColumn As EmailListColumn = EmailListColumn.ReceivedAt
     Private _sortAscending As Boolean = False   ' デフォルト: 降順
     Private ReadOnly _colBaseNames As String() = {"添付", "件名", "差出人", "受信日時", "サイズ"}
 
@@ -120,7 +129,7 @@ Public Class MainForm
         emailImageList.Images.Add(CreatePaperclipIcon())       ' index 1: ペーパークリップ
 
         ' ── ソート設定を復元 ──────────────────────────────────────
-        _sortColumn = _settings.EmailListSortColumn
+        _sortColumn = CType(_settings.EmailListSortColumn, EmailListColumn)
         _sortAscending = _settings.EmailListSortAscending
 
         ' ── 列幅を復元 ────────────────────────────────────────────
@@ -945,12 +954,13 @@ Public Class MainForm
 
     ''' <summary>列名クリックでソート方向を切り替え、一覧を更新する。</summary>
     Private Sub listViewEmails_ColumnClick(sender As Object, e As ColumnClickEventArgs) Handles listViewEmails.ColumnClick
-        If e.Column = _sortColumn Then
+        Dim clickedColumn As EmailListColumn = CType(e.Column, EmailListColumn)
+        If clickedColumn = _sortColumn Then
             _sortAscending = Not _sortAscending
         Else
-            _sortColumn = e.Column
+            _sortColumn = clickedColumn
             ' 受信日時はデフォルト降順、他は昇順
-            _sortAscending = (e.Column <> 3)
+            _sortAscending = (clickedColumn <> EmailListColumn.ReceivedAt)
         End If
         UpdateColumnSortIndicator()
 
@@ -1002,12 +1012,12 @@ Public Class MainForm
         If _emailCache Is Nothing OrElse _emailCache.Count = 0 Then Return
         Dim asc As Boolean = _sortAscending
         Select Case _sortColumn
-            Case 0  ' 添付
+            Case EmailListColumn.Attachment
                 _emailCache.Sort(Function(a As Models.Email, b As Models.Email) As Integer
                                      Dim cmp As Integer = a.HasAttachments.CompareTo(b.HasAttachments)
                                      Return If(asc, cmp, -cmp)
                                  End Function)
-            Case 1  ' 件名
+            Case EmailListColumn.Subject
                 _emailCache.Sort(Function(a As Models.Email, b As Models.Email) As Integer
                                      Dim cmp As Integer = String.Compare(
                                          If(a.Subject, String.Empty),
@@ -1015,7 +1025,7 @@ Public Class MainForm
                                          StringComparison.OrdinalIgnoreCase)
                                      Return If(asc, cmp, -cmp)
                                  End Function)
-            Case 2  ' 差出人
+            Case EmailListColumn.Sender
                 _emailCache.Sort(Function(a As Models.Email, b As Models.Email) As Integer
                                      Dim sa As String = If(Not String.IsNullOrEmpty(a.SenderName),
                                                            a.SenderName,
@@ -1026,12 +1036,12 @@ Public Class MainForm
                                      Dim cmp As Integer = String.Compare(sa, sb, StringComparison.OrdinalIgnoreCase)
                                      Return If(asc, cmp, -cmp)
                                  End Function)
-            Case 3  ' 受信日時
+            Case EmailListColumn.ReceivedAt
                 _emailCache.Sort(Function(a As Models.Email, b As Models.Email) As Integer
                                      Dim cmp As Integer = a.ReceivedAt.CompareTo(b.ReceivedAt)
                                      Return If(asc, cmp, -cmp)
                                  End Function)
-            Case 4  ' サイズ
+            Case EmailListColumn.Size
                 _emailCache.Sort(Function(a As Models.Email, b As Models.Email) As Integer
                                      Dim cmp As Integer = a.EmailSize.CompareTo(b.EmailSize)
                                      Return If(asc, cmp, -cmp)
@@ -1043,7 +1053,7 @@ Public Class MainForm
     Private Sub UpdateColumnSortIndicator()
         If listViewEmails.Columns.Count < _colBaseNames.Length Then Return
         For i As Integer = 0 To _colBaseNames.Length - 1
-            Dim indicator As String = If(i = _sortColumn,
+            Dim indicator As String = If(i = CInt(_sortColumn),
                                          If(_sortAscending, " ↑", " ↓"),
                                          String.Empty)
             listViewEmails.Columns(i).Text = _colBaseNames(i) & indicator
@@ -1103,7 +1113,7 @@ Public Class MainForm
         Next
         _settings.EmailListColumnOrder = String.Join(",", displayIndices)
         _settings.EmailListColumnWidths = String.Join(",", widths)
-        _settings.EmailListSortColumn = _sortColumn
+        _settings.EmailListSortColumn = CInt(_sortColumn)
         _settings.EmailListSortAscending = _sortAscending
     End Sub
 
