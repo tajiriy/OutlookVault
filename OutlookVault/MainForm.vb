@@ -1083,6 +1083,15 @@ Public Class MainForm
     End Sub
 
     Private Sub menuItemSettings_Click(sender As Object, e As EventArgs) Handles menuItemSettings.Click
+        OpenSettingsDialog()
+    End Sub
+
+    Private Sub btnSettings_Click(sender As Object, e As EventArgs) Handles btnSettings.Click
+        OpenSettingsDialog()
+    End Sub
+
+    ''' <summary>設定ダイアログを表示し、結果に応じてアプリケーション設定を反映する。</summary>
+    Private Sub OpenSettingsDialog()
         Dim wasReset As Boolean = False
         Using frm As New SettingsForm()
             frm.ShowDialog(Me)

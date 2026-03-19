@@ -150,10 +150,10 @@ Partial Class SettingsForm
         Me.grpAutoImport.Controls.Add(Me.numDiffBuffer)
         Me.grpAutoImport.Controls.Add(Me.lblDiffBufferUnit)
         Me.grpAutoImport.Controls.Add(Me.chkSyncDeletions)
-        Me.grpAutoImport.Location = New System.Drawing.Point(8, 110)
+        Me.grpAutoImport.Location = New System.Drawing.Point(8, 248)
         Me.grpAutoImport.Name = "grpAutoImport"
         Me.grpAutoImport.Size = New System.Drawing.Size(488, 205)
-        Me.grpAutoImport.TabIndex = 1
+        Me.grpAutoImport.TabIndex = 2
         Me.grpAutoImport.TabStop = False
         Me.grpAutoImport.Text = "自動取り込み"
         '
@@ -300,10 +300,10 @@ Partial Class SettingsForm
         '
         Me.grpFolders.Controls.Add(Me.lstFolders)
         Me.grpFolders.Controls.Add(Me.btnSelectFolders)
-        Me.grpFolders.Location = New System.Drawing.Point(8, 323)
+        Me.grpFolders.Location = New System.Drawing.Point(8, 110)
         Me.grpFolders.Name = "grpFolders"
         Me.grpFolders.Size = New System.Drawing.Size(488, 130)
-        Me.grpFolders.TabIndex = 2
+        Me.grpFolders.TabIndex = 1
         Me.grpFolders.TabStop = False
         Me.grpFolders.Text = "対象フォルダ"
         '
@@ -475,8 +475,8 @@ Partial Class SettingsForm
         Me.CancelButton = Me.btnCancel
         Me.ClientSize = New System.Drawing.Size(512, 819)
         Me.Controls.Add(Me.grpPaths)
-        Me.Controls.Add(Me.grpAutoImport)
         Me.Controls.Add(Me.grpFolders)
+        Me.Controls.Add(Me.grpAutoImport)
         Me.Controls.Add(Me.grpDisplay)
         Me.Controls.Add(Me.grpTray)
         Me.Controls.Add(Me.grpData)

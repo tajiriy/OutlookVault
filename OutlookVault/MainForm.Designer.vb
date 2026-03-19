@@ -46,6 +46,7 @@ Partial Class MainForm
         Me.btnSearch = New System.Windows.Forms.ToolStripButton()
         Me.btnClearSearch = New System.Windows.Forms.ToolStripButton()
         Me.lblFolderCount = New System.Windows.Forms.ToolStripLabel()
+        Me.btnSettings = New System.Windows.Forms.ToolStripButton()
         Me.splitMain = New System.Windows.Forms.SplitContainer()
         Me.treeViewFolders = New System.Windows.Forms.TreeView()
         Me.splitRight = New System.Windows.Forms.SplitContainer()
@@ -112,6 +113,8 @@ Partial Class MainForm
         'menuItemSettings
         '
         Me.menuItemSettings.Name = "menuItemSettings"
+        Me.menuItemSettings.ShortcutKeys = CType((System.Windows.Forms.Keys.Control Or System.Windows.Forms.Keys.Oemcomma), System.Windows.Forms.Keys)
+        Me.menuItemSettings.ShortcutKeyDisplayString = "Ctrl+,"
         Me.menuItemSettings.Size = New System.Drawing.Size(155, 22)
         Me.menuItemSettings.Text = "設定(&T)..."
         '
@@ -189,7 +192,7 @@ Partial Class MainForm
         '
         'toolStrip
         '
-        Me.toolStrip.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.btnImportNow, Me.btnAutoImport, Me.toolStripSep1, Me.txtSearch, Me.btnSearch, Me.btnClearSearch, Me.lblFolderCount})
+        Me.toolStrip.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.btnImportNow, Me.btnAutoImport, Me.toolStripSep1, Me.txtSearch, Me.btnSearch, Me.btnClearSearch, Me.btnSettings, Me.lblFolderCount})
         Me.toolStrip.Location = New System.Drawing.Point(0, 24)
         Me.toolStrip.Name = "toolStrip"
         Me.toolStrip.Size = New System.Drawing.Size(1397, 25)
@@ -244,6 +247,16 @@ Partial Class MainForm
         Me.lblFolderCount.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right
         Me.lblFolderCount.Name = "lblFolderCount"
         Me.lblFolderCount.Size = New System.Drawing.Size(0, 22)
+        '
+        'btnSettings
+        '
+        Me.btnSettings.Alignment = System.Windows.Forms.ToolStripItemAlignment.Right
+        Me.btnSettings.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text
+        Me.btnSettings.Font = New System.Drawing.Font("Segoe UI Emoji", 12.0!)
+        Me.btnSettings.Name = "btnSettings"
+        Me.btnSettings.Size = New System.Drawing.Size(23, 22)
+        Me.btnSettings.Text = "🔧"
+        Me.btnSettings.ToolTipText = "設定を開きます (Ctrl+,)"
         '
         'splitMain
         '
@@ -541,6 +554,7 @@ Partial Class MainForm
     Friend WithEvents btnSearch As System.Windows.Forms.ToolStripButton
     Friend WithEvents btnClearSearch As System.Windows.Forms.ToolStripButton
     Friend WithEvents lblFolderCount As System.Windows.Forms.ToolStripLabel
+    Friend WithEvents btnSettings As System.Windows.Forms.ToolStripButton
     Friend WithEvents splitMain As System.Windows.Forms.SplitContainer
     Friend WithEvents splitRight As System.Windows.Forms.SplitContainer
     Friend WithEvents treeViewFolders As System.Windows.Forms.TreeView
