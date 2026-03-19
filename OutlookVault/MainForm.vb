@@ -755,20 +755,18 @@ Public Class MainForm
         emailPreview.ClearPreview()
         conversationView.ClearView()
 
-        For Each emailId As Integer In selectedIds
-            ' 添付ファイルの物理削除
-            Dim attachments As List(Of Models.Attachment) = _repo.GetAttachmentsByEmailId(emailId)
-            For Each att As Models.Attachment In attachments
-                If IO.File.Exists(att.FilePath) Then
-                    Try
-                        IO.File.Delete(att.FilePath)
-                    Catch
-                        ' 物理削除失敗は無視して DB 削除を継続
-                    End Try
-                End If
-            Next
-            ' DB から削除（トゥームストーン記録を含む）
-            _repo.DeleteEmail(emailId)
+        ' DB から一括削除（トゥームストーン記録・CASCADE 含む）し、添付ファイルパスを取得
+        Dim attachmentPaths As List(Of String) = _repo.DeleteEmailsByIds(selectedIds)
+
+        ' 添付ファイルの物理削除
+        For Each filePath As String In attachmentPaths
+            If IO.File.Exists(filePath) Then
+                Try
+                    IO.File.Delete(filePath)
+                Catch
+                    ' 物理削除失敗は無視（DB 削除は既に完了）
+                End Try
+            End If
         Next
 
         Await LoadEmailsAsync(_currentFolder)
