@@ -4,9 +4,9 @@
 
 | ステータス | 件数 |
 |-----------|------|
-| open      | 11   |
+| open      | 10   |
 | in-progress | 0  |
-| done      | 20   |
+| done      | 21   |
 | wontfix   | 1    |
 
 ## カテゴリ
@@ -466,7 +466,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | Medium |
 | カテゴリ | error-handling |
 | ソース | review |
@@ -476,9 +476,9 @@
 
 **内容:** `Error(message, ex)` が `ex.Message` のみ記録し、スタックトレースや InnerException が記録されない。
 
-**対策:** `ex.ToString()` を使用してスタックトレースも含める。
+**対策:** `ex.GetType().Name & ": " & ex.Message` → `ex.ToString()` に変更。スタックトレース・InnerException が自動的に含まれる。テストにスタックトレース検証を追加。
 
-**メモ:** なし
+**メモ:** 修正日: 2026-03-19
 
 ---
 
@@ -683,3 +683,4 @@
 | 2026-03-19 | R-017〜R-032 | 2回目の code-reviewer レビューから 16 件を一括登録 |
 | 2026-03-19 | R-017, R-018, R-019 | done: COM 二重解放修正、Items 解放漏れ修正、BeginBulk 例外処理追加 |
 | 2026-03-19 | R-020, R-021 | done: SyncDeletions Items 解放、HtmlSanitizer Regex Compiled 化 |
+| 2026-03-19 | R-023 | done: Logger.Error に ex.ToString() でスタックトレースを記録 |
