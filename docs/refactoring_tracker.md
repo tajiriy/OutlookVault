@@ -4,10 +4,10 @@
 
 | ステータス | 件数 |
 |-----------|------|
-| open      | 6    |
+| open      | 0    |
 | in-progress | 0  |
 | done      | 25   |
-| wontfix   | 1    |
+| wontfix   | 7    |
 
 ## カテゴリ
 
@@ -486,7 +486,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | wontfix |
 | 優先度 | Medium |
 | カテゴリ | performance |
 | ソース | review |
@@ -496,9 +496,9 @@
 
 **内容:** `TargetFolders` ゲッターが呼び出しのたびに ConfigurationManager を読み込み new List を生成。
 
-**対策:** キャッシュするか、呼び出し側でローカル変数に保持するパターンの徹底をコメントで明示。
+**対策:** wontfix — 主要呼び出し箇所（RunImportAsync 等）では既にローカル変数に1回取得して使用している。キャッシュ導入は設定変更の反映タイミングが複雑になるためコスト対効果が見合わない。
 
-**メモ:** 現状は主要呼び出し箇所で1回取得しているが、他箇所の注意喚起が必要。
+**メモ:** なし
 
 ---
 
@@ -526,7 +526,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | wontfix |
 | 優先度 | Medium |
 | カテゴリ | error-handling |
 | ソース | review |
@@ -536,9 +536,9 @@
 
 **内容:** `att.FilePath` が DB の相対パスのまま `File.Exists` に渡されており、正しく動作しない可能性。
 
-**対策:** `AttachmentDirectory` と結合して絶対パスに変換してから使用。
+**対策:** wontfix — `GetAttachmentsByEmailId` (EmailRepository.vb 行431-437) で既に相対パス→絶対パス変換が実装済み。レビュー時の見落とし。
 
-**メモ:** AttachmentSaveAs_Click でも同様。
+**メモ:** AttachmentSaveAs_Click も GetAttachmentsByEmailId 経由で取得した絶対パスを使用しているため問題なし。
 
 ---
 
@@ -566,7 +566,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | wontfix |
 | 優先度 | Medium |
 | カテゴリ | test-coverage |
 | ソース | review |
@@ -586,7 +586,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | wontfix |
 | 優先度 | Medium |
 | カテゴリ | test-coverage |
 | ソース | review |
@@ -606,7 +606,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | wontfix |
 | 優先度 | Low |
 | カテゴリ | winforms |
 | ソース | review |
@@ -626,7 +626,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | wontfix |
 | 優先度 | Low |
 | カテゴリ | performance |
 | ソース | review |
@@ -686,3 +686,9 @@
 | 2026-03-19 | R-023 | done: Logger.Error に ex.ToString() でスタックトレースを記録 |
 | 2026-03-19 | R-022, R-032 | done: セルキーをビットシフトに変更、FormatFileSize を共通ヘルパーに統合 |
 | 2026-03-19 | R-025, R-027 | done: 添付統計を SQL GROUP BY 集計に変更、JsonStr 制御文字完全対応 |
+| 2026-03-19 | R-024 | wontfix: 主要呼び出し箇所で既にローカル変数で1回取得済み |
+| 2026-03-19 | R-026 | wontfix: GetAttachmentsByEmailId で既に絶対パス変換済み（レビュー見落とし） |
+| 2026-03-19 | R-028 | wontfix: テストインフラ変更が必要でコスト対効果が見合わない |
+| 2026-03-19 | R-029 | wontfix: R-015 と同様、COM 依存が深く分離コスト高 |
+| 2026-03-19 | R-030 | wontfix: 終了処理のみで頻度低く、async化の影響範囲が大きい |
+| 2026-03-19 | R-031 | wontfix: 開発者向けテーブルビューアで万件単位の利用は想定外 |
