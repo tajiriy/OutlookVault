@@ -4,9 +4,9 @@
 
 | ステータス | 件数 |
 |-----------|------|
-| open      | 2    |
+| open      | 1    |
 | in-progress | 0  |
-| done      | 14   |
+| done      | 15   |
 | wontfix   | 0    |
 
 ## カテゴリ
@@ -208,17 +208,17 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | Medium |
 | カテゴリ | readability |
 | ソース | review |
 | 対象ファイル | OutlookVault/Services/ImportService.vb |
 | 登録日 | 2026-03-19 |
-| 修正日 | - |
+| 修正日 | 2026-03-19 |
 
 **内容:** `ImportFolder` が差分スキャン判定・アイテムイテレーション・中間コミット管理・同期状態更新・ログ出力・パフォーマンスチューニングを 1 メソッドに集約（約 180 行）。ネストが深く変更時に副作用が生じやすい。
 
-**対策:** `BuildItemsCollection`（Restrict フィルタ判定）、`IterateAndImport`（ループ・中間コミット）、`UpdateSyncState`、`LogImportResult` に分割。各 30〜50 行程度に。
+**対策:** 以下の4メソッドを抽出しImportFolderから呼び出し: `BuildItemsCollection`（差分/フルスキャン判定+Items取得）、`HandleMailItemError`（エラー処理・エラーID登録・ログ出力）、`UpdateSyncState`（同期状態DB更新）、`LogImportResult`（完了ログ出力）。ImoprtFolderは約130行→約80行に縮小。
 
 **メモ:** ImportService.vb 行 115〜295
 
@@ -358,3 +358,4 @@
 | 2026-03-19 | R-012, R-013 | done: StringComparison.OrdinalIgnoreCase 使用、Regex を Shared Compiled に昇格 |
 | 2026-03-19 | R-014, R-016 | done: JSON エスケープに制御文字追加、レジストリ Catch を例外型限定+Logger.Warn |
 | 2026-03-19 | R-006 | done: 動的コントロールの RemoveHandler+Dispose、Font フィールド昇格 |
+| 2026-03-19 | R-010 | done: ImportFolder を 4 サブメソッドに分割（180行→80行） |
