@@ -176,16 +176,15 @@ Public Class MainForm
         treeViewFolders.BeginUpdate()
         treeViewFolders.Nodes.Clear()
 
-        Dim folderCounts As Dictionary(Of String, Integer) = _repo.GetFolderCounts()
+        Dim folderData As Tuple(Of Integer, Dictionary(Of String, Integer)) = _repo.GetFolderCounts()
+        Dim totalCount As Integer = folderData.Item1
+        Dim folderCounts As Dictionary(Of String, Integer) = folderData.Item2
 
-        Dim totalCount As Integer = 0
-        If folderCounts.ContainsKey(Nothing) Then totalCount = folderCounts(Nothing)
         Dim nodeAll As New TreeNode(String.Format("すべて ({0:N0})", totalCount))
         nodeAll.Tag = Nothing
         treeViewFolders.Nodes.Add(nodeAll)
 
         For Each kvp As KeyValuePair(Of String, Integer) In folderCounts
-            If kvp.Key Is Nothing Then Continue For
             Dim node As New TreeNode(String.Format("{0} ({1:N0})", kvp.Key, kvp.Value))
             node.Tag = kvp.Key
             treeViewFolders.Nodes.Add(node)
@@ -843,16 +842,14 @@ Public Class MainForm
             Function() As List(Of Tuple(Of String, Integer))
                 Dim result As New List(Of Tuple(Of String, Integer))()
                 Try
-                    Dim folderCounts As Dictionary(Of String, Integer) = repo.GetFolderCounts()
-                    ' 「すべて」(Nothing キー) を先頭に配置
-                    Dim totalCount As Integer = 0
-                    If folderCounts.ContainsKey(Nothing) Then totalCount = folderCounts(Nothing)
-                    result.Add(Tuple.Create(CType(Nothing, String), totalCount))
-                    For Each kvp As KeyValuePair(Of String, Integer) In folderCounts
-                        If kvp.Key Is Nothing Then Continue For
+                    Dim counts As Tuple(Of Integer, Dictionary(Of String, Integer)) = repo.GetFolderCounts()
+                    ' 「すべて」を先頭に配置
+                    result.Add(Tuple.Create(CType(Nothing, String), counts.Item1))
+                    For Each kvp As KeyValuePair(Of String, Integer) In counts.Item2
                         result.Add(Tuple.Create(kvp.Key, kvp.Value))
                     Next
-                Catch
+                Catch ex As Exception
+                    Services.Logger.Warn("フォルダ件数の取得に失敗しました: " & ex.Message)
                 End Try
                 Return result
             End Function)
@@ -911,11 +908,13 @@ Public Class MainForm
                 Dim lastImport As DateTime? = Nothing
                 Try
                     count = repo.GetTotalCount()
-                Catch
+                Catch ex As Exception
+                    Services.Logger.Warn("ステータスバーの総数取得に失敗しました: " & ex.Message)
                 End Try
                 Try
                     lastImport = repo.GetLastImportDate()
-                Catch
+                Catch ex As Exception
+                    Services.Logger.Warn("ステータスバーの最終取り込み日時取得に失敗しました: " & ex.Message)
                 End Try
                 Return Tuple.Create(count, lastImport)
             End Function)
@@ -1148,6 +1147,12 @@ Public Class MainForm
 
         SaveColumnSettings()
         notifyIcon.Visible = False
+
+        ' EmailRepository のバルクリソースを確実に解放
+        If _repo IsNot Nothing Then
+            _repo.Dispose()
+        End If
+
         Services.Logger.Info("アプリケーションを終了します")
     End Sub
 

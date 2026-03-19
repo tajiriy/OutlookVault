@@ -141,7 +141,8 @@ Namespace Services
                             Marshal.ReleaseComObject(f)
                         End Try
                     End If
-                Catch
+                Catch ex As COMException
+                    ' デフォルトフォルダが存在しない環境では例外が発生する（正常動作）
                 End Try
             Next
             Return ids
@@ -182,7 +183,8 @@ Namespace Services
                 Finally
                     Marshal.ReleaseComObject(pa)
                 End Try
-            Catch
+            Catch ex As COMException
+                ' PropertyAccessor が未サポートのフォルダでは例外が発生する（正常動作）
             End Try
             Return False
         End Function
@@ -197,7 +199,8 @@ Namespace Services
                 Finally
                     Marshal.ReleaseComObject(pa)
                 End Try
-            Catch
+            Catch ex As COMException
+                ' ContainerClass が未設定のフォルダでは例外が発生する（正常動作）
             End Try
             Return String.Empty
         End Function
@@ -528,7 +531,8 @@ Namespace Services
                 If val Is Nothing Then Return Nothing
                 If Not TypeOf val Is String Then Return Nothing
                 Return CType(val, String)
-            Catch
+            Catch ex As COMException
+                ' MAPI プロパティが存在しないメールでは例外が発生する（正常動作）
                 Return Nothing
             End Try
         End Function
@@ -612,7 +616,9 @@ Namespace Services
                         Marshal.ReleaseComObject(entry)
                     End Try
                 End If
-            Catch
+            Catch ex As COMException
+                ' Exchange Server への問い合わせ失敗は元のアドレスで代替する
+                Logger.Warn("Exchange アドレス解決に失敗: " & exAddress & " - " & ex.Message)
             End Try
 
             _exchangeSmtpCache(exAddress) = resolved
@@ -681,7 +687,8 @@ Namespace Services
                 Finally
                     Marshal.ReleaseComObject(pa)
                 End Try
-            Catch
+            Catch ex As COMException
+                ' Content-ID が未設定の添付ファイルでは例外が発生する（正常動作）
                 Return Nothing
             End Try
         End Function

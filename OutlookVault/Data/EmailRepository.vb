@@ -351,10 +351,10 @@ SELECT last_insert_rowid();"
 
         ''' <summary>
         ''' フォルダ別の件数と全体件数を1クエリで取得する。
-        ''' キーがフォルダ名、値が件数。キー Nothing は全体件数。
+        ''' Item1: 全体件数、Item2: フォルダ名→件数の Dictionary。
         ''' </summary>
-        Public Function GetFolderCounts() As Dictionary(Of String, Integer)
-            Dim result As New Dictionary(Of String, Integer)()
+        Public Function GetFolderCounts() As Tuple(Of Integer, Dictionary(Of String, Integer))
+            Dim folders As New Dictionary(Of String, Integer)()
             Dim total As Integer = 0
             Const sql As String = "SELECT folder_name, COUNT(1) FROM emails WHERE folder_name IS NOT NULL GROUP BY folder_name ORDER BY folder_name"
             Using conn As SQLiteConnection = _dbManager.GetConnection()
@@ -363,7 +363,7 @@ SELECT last_insert_rowid();"
                         While reader.Read()
                             Dim folderName As String = reader.GetString(0)
                             Dim count As Integer = reader.GetInt32(1)
-                            result(folderName) = count
+                            folders(folderName) = count
                             total += count
                         End While
                     End Using
@@ -373,8 +373,7 @@ SELECT last_insert_rowid();"
                     total += Convert.ToInt32(cmd2.ExecuteScalar())
                 End Using
             End Using
-            result(Nothing) = total
-            Return result
+            Return Tuple.Create(total, folders)
         End Function
 
         ''' <summary>フォルダ指定可能なメール総数を返す。</summary>
