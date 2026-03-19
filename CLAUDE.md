@@ -33,7 +33,7 @@ OutlookVault は .NET Framework 4.6.2 / VB.NET の Windows Forms デスクトッ
 
 - ソリューション (`OutlookVault.sln`) に `OutlookVault/`（本体）と `OutlookVault.Tests/`（テスト）を含む構成
 - エントリポイント: `My.MyApplication` → `MainForm`
-- `MainForm.Designer.vb` はデザイナー自動生成ファイル。手動編集しないこと
+- `*.Designer.vb` は Windows Forms デザイナーとの共有ファイル（下記「Windows Forms Designer の扱い」参照）
 
 ## 開発の進め方
 
@@ -51,10 +51,28 @@ OutlookVault は .NET Framework 4.6.2 / VB.NET の Windows Forms デスクトッ
 - コミット前に必ず `msbuild OutlookVault/OutlookVault.vbproj` でビルドが通ることを確認する
 - ビルドエラーがある状態ではコミットしない
 
-## 注意事項
+## Windows Forms Designer の扱い
 
-- `*.Designer.vb` ファイルは Windows Forms デザイナーが管理するため、直接編集せず `InitializeComponent()` 内のコードはデザイナーに任せる
-- UI コントロールの追加・変更は Designer.vb ではなくコードビハインド側（`MainForm.vb`）で対応するか、Designer.vb の `InitializeComponent()` 内に正しい形式で追記する
+Windows Forms の標準パターンに従い、Designer.vb とコードビハインドの役割を分離する。
+
+### Designer.vb (`InitializeComponent()`) に書くもの
+- コントロールのインスタンス生成（`New`）
+- プロパティ設定（`Name`, `Text`, `Size`, `Location`, `Anchor`, `Dock` など）
+- レイアウト・配置（`Controls.Add`, `SuspendLayout` / `ResumeLayout`）
+- イベントハンドラの紐付け（`AddHandler` / `Handles` 句に対応する宣言）
+
+### コードビハインド (.vb) に書くもの
+- イベントハンドラの実装
+- ビジネスロジック・データ処理
+- 動的に生成・変更するコントロールの操作
+
+### Claude Code が Designer.vb を編集する際のルール
+- 既存の `InitializeComponent()` のコードパターン（インデント、記述順、コメント形式）に合わせる
+- `SuspendLayout` / `ResumeLayout` の構造を壊さない
+- フィールド宣言（`Friend WithEvents`）を Designer.vb のクラス末尾に追加する
+- 編集後はビルドして壊れていないことを確認する
+
+### 編集対象外
 - `My Project/` 配下のデザイナー生成ファイル (`*.Designer.vb`) は自動生成のため手動編集しないこと
 
 ## バージョン管理
