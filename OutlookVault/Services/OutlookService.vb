@@ -207,6 +207,7 @@ Namespace Services
 
         ''' <summary>フォルダ名でフォルダを検索して返す。見つからない場合は Nothing。</summary>
         Public Function FindFolder(folderName As String) As Outlook.MAPIFolder
+            Dim result As Outlook.MAPIFolder = Nothing
             Dim stores As Outlook.Stores = _ns.Stores
             Try
                 For i As Integer = 1 To stores.Count
@@ -216,12 +217,15 @@ Namespace Services
                         root = store.GetRootFolder()
                         Dim found As Outlook.MAPIFolder = SearchFolder(root, folderName)
                         If found IsNot Nothing Then
-                            ' found を返すのでここでは root/store の解放のみ
-                            ' ※ found が root 自身の場合は解放しない
-                            If found IsNot root Then Marshal.ReleaseComObject(root)
-                            Marshal.ReleaseComObject(store)
-                            Marshal.ReleaseComObject(stores)
-                            Return found
+                            result = found
+                            ' found が root 自身の場合は root を解放しない（呼び出し元で使用）
+                            If found IsNot root Then
+                                Marshal.ReleaseComObject(root)
+                                root = Nothing  ' Finally での二重解放を防止
+                            Else
+                                root = Nothing  ' found = root なので解放しない
+                            End If
+                            Exit For
                         End If
                     Finally
                         If root IsNot Nothing Then Marshal.ReleaseComObject(root)
@@ -231,7 +235,7 @@ Namespace Services
             Finally
                 Marshal.ReleaseComObject(stores)
             End Try
-            Return Nothing
+            Return result
         End Function
 
         Private Function SearchFolder(folder As Outlook.MAPIFolder, name As String) As Outlook.MAPIFolder

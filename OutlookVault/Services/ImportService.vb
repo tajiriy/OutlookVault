@@ -191,7 +191,12 @@ Namespace Services
                             ' N 件ごとに中間コミット（クラッシュ時のデータロスを軽減）
                             If sinceLastCommit >= BulkCommitInterval Then
                                 _repo.CommitBulk()
-                                _repo.BeginBulk()
+                                Try
+                                    _repo.BeginBulk()
+                                Catch exBulk As Exception
+                                    Logger.Error("中間コミット後の BeginBulk に失敗しました", exBulk)
+                                    Throw
+                                End Try
                                 sinceLastCommit = 0
                             End If
                         Else
@@ -232,6 +237,8 @@ Namespace Services
                 Throw
             Finally
                 _threadingSvc.ClearCaches()
+                ' ── COM オブジェクト解放 ──
+                If items IsNot Nothing Then Runtime.InteropServices.Marshal.ReleaseComObject(items)
                 ' ── 高速インポート後処理: synchronous 復元 ──
                 Try
                     _dbManager.SetSynchronousMode(perfConn, Data.SynchronousMode.Normal)
@@ -253,7 +260,9 @@ Namespace Services
                 If syncState IsNot Nothing AndAlso syncState.FullSyncDone Then
                     Dim sinceDate As DateTime = syncState.LastSyncTime.AddHours(-_settings.DiffSyncBufferHours)
                     Dim filter As String = "[ReceivedTime] >= '" & sinceDate.ToString("yyyy/MM/dd HH:mm") & "'"
-                    items = folder.Items.Restrict(filter)
+                    Dim allItems As Outlook.Items = folder.Items
+                    items = allItems.Restrict(filter)
+                    Runtime.InteropServices.Marshal.ReleaseComObject(allItems)
                     Logger.Info(String.Format("フォルダ '{0}' を差分スキャンします（基準日時: {1}）", folderName, sinceDate.ToString("yyyy/MM/dd HH:mm")))
                 Else
                     items = folder.Items
