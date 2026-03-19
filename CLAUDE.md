@@ -57,6 +57,14 @@ OutlookVault は .NET Framework 4.6.2 / VB.NET の Windows Forms デスクトッ
 - UI コントロールの追加・変更は Designer.vb ではなくコードビハインド側（`MainForm.vb`）で対応するか、Designer.vb の `InitializeComponent()` 内に正しい形式で追記する
 - `My Project/` 配下のデザイナー生成ファイル (`*.Designer.vb`) は自動生成のため手動編集しないこと
 
+## バージョン管理
+
+- セマンティックバージョニング (`MAJOR.MINOR.PATCH`) を採用
+- バージョンの正は `My Project/AssemblyInfo.vb` の `AssemblyVersion` / `AssemblyFileVersion`
+- **PATCH**: `build.sh` 実行時に自動で +1（ビルドごとにインクリメント）
+- **MINOR / MAJOR**: ユーザーの指示で上げる。または機能追加・破壊的変更を検知した場合は Claude が提案する
+- `AboutForm` が `AssemblyVersion` を読み取って表示する
+
 ## VB.NET コーディング規約
 
 - すべての `.vb` ソースファイル（自動生成ファイルを除く）の先頭に以下を明示すること:
