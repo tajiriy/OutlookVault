@@ -546,7 +546,7 @@ Namespace Services
                                                  fieldName As String) As String
             If String.IsNullOrEmpty(headers) Then Return Nothing
 
-            Dim searchFor As String = fieldName.ToLower() & ":"
+            Dim searchFor As String = fieldName & ":"
             Dim lines As String() = headers.Split(New String() {vbCrLf, vbLf},
                                                   StringSplitOptions.None)
             Dim inField As Boolean = False
@@ -560,7 +560,7 @@ Namespace Services
                     Else
                         Exit For
                     End If
-                ElseIf line.ToLower().StartsWith(searchFor) Then
+                ElseIf line.StartsWith(searchFor, StringComparison.OrdinalIgnoreCase) Then
                     inField = True
                     sb.Append(line.Substring(searchFor.Length).Trim())
                 End If
