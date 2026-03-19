@@ -12,6 +12,23 @@ Namespace Services
     ''' </summary>
     Public Class QuoteStripperService
 
+        ' HTML 引用除去用の事前コンパイル済み正規表現
+        Private Shared ReadOnly BlockquoteRegex As New Regex(
+            "<blockquote[^>]*>.*?</blockquote\s*>",
+            RegexOptions.Singleline Or RegexOptions.IgnoreCase Or RegexOptions.Compiled)
+
+        Private Shared ReadOnly GmailQuoteRegex As New Regex(
+            "<div\s+class=""gmail_quote""[^>]*>.*?</div\s*>",
+            RegexOptions.Singleline Or RegexOptions.IgnoreCase Or RegexOptions.Compiled)
+
+        Private Shared ReadOnly OutlookReplyFwdRegex As New Regex(
+            "<div\s+id=""divRplyFwdMsg"".*",
+            RegexOptions.Singleline Or RegexOptions.IgnoreCase Or RegexOptions.Compiled)
+
+        Private Shared ReadOnly OutlookMessageHeaderRegex As New Regex(
+            "<div\s+[^>]*class=""[^""]*OutlookMessageHeader[^""]*"".*",
+            RegexOptions.Singleline Or RegexOptions.IgnoreCase Or RegexOptions.Compiled)
+
         ' 区切り線パターン（行全体または先頭一致）
         Private Shared ReadOnly SeparatorPatterns As String() = {
             "-----Original Message-----",
@@ -61,32 +78,16 @@ Namespace Services
             Dim result As String = html
 
             ' blockquote 要素を削除（Outlook / メール全般の引用形式）
-            result = Regex.Replace(
-                result,
-                "<blockquote[^>]*>.*?</blockquote\s*>",
-                String.Empty,
-                RegexOptions.Singleline Or RegexOptions.IgnoreCase)
+            result = BlockquoteRegex.Replace(result, String.Empty)
 
             ' Gmail 引用 div を削除
-            result = Regex.Replace(
-                result,
-                "<div\s+class=""gmail_quote""[^>]*>.*?</div\s*>",
-                String.Empty,
-                RegexOptions.Singleline Or RegexOptions.IgnoreCase)
+            result = GmailQuoteRegex.Replace(result, String.Empty)
 
             ' Outlook の返信/転送区切り div を削除（それ以降すべて）
-            result = Regex.Replace(
-                result,
-                "<div\s+id=""divRplyFwdMsg"".*",
-                String.Empty,
-                RegexOptions.Singleline Or RegexOptions.IgnoreCase)
+            result = OutlookReplyFwdRegex.Replace(result, String.Empty)
 
             ' Outlook の OutlookMessageHeader div を削除（それ以降すべて）
-            result = Regex.Replace(
-                result,
-                "<div\s+[^>]*class=""[^""]*OutlookMessageHeader[^""]*"".*",
-                String.Empty,
-                RegexOptions.Singleline Or RegexOptions.IgnoreCase)
+            result = OutlookMessageHeaderRegex.Replace(result, String.Empty)
 
             Return result
         End Function
