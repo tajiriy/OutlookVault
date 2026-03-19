@@ -190,6 +190,9 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Forms\AttachmentStatsForm.resx">
+      <DependentUpon>AttachmentStatsForm.vb</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Forms\HelpForm.resx">
       <DependentUpon>HelpForm.vb</DependentUpon>
     </EmbeddedResource>
