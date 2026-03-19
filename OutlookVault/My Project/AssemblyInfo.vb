@@ -9,7 +9,7 @@ Imports System.Runtime.InteropServices
 ' アセンブリ属性の値を確認します
 
 <Assembly: AssemblyTitle("OutlookVault")>
-<Assembly: AssemblyDescription("")>
+<Assembly: AssemblyDescription("Outlook メール保管ツール")>
 <Assembly: AssemblyCompany("")>
 <Assembly: AssemblyProduct("OutlookVault")>
 <Assembly: AssemblyCopyright("Copyright ©  2026")>
@@ -28,5 +28,5 @@ Imports System.Runtime.InteropServices
 '      Revision
 '
 
-<Assembly: AssemblyVersion("1.0.0.0")>
-<Assembly: AssemblyFileVersion("1.0.0.0")>
+<Assembly: AssemblyVersion("1.0.1.0")>
+<Assembly: AssemblyFileVersion("1.0.1.0")>

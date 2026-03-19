@@ -1183,8 +1183,9 @@ Public Class MainForm
     End Sub
 
     Private Sub menuItemHelpAbout_Click(sender As Object, e As EventArgs) Handles menuItemHelpAbout.Click
-        MessageBox.Show("OutlookVault" & vbCrLf & "Outlook メール保管ツール",
-            "バージョン情報", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        Using frm As New Forms.AboutForm()
+            frm.ShowDialog(Me)
+        End Using
     End Sub
 
 End Class
