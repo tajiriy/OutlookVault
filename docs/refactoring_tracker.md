@@ -4,9 +4,9 @@
 
 | ステータス | 件数 |
 |-----------|------|
-| open      | 13   |
+| open      | 11   |
 | in-progress | 0  |
-| done      | 3    |
+| done      | 5    |
 | wontfix   | 0    |
 
 ## カテゴリ
@@ -28,19 +28,19 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | High |
 | カテゴリ | resource-management |
 | ソース | review |
 | 対象ファイル | OutlookVault/Services/OutlookService.vb |
 | 登録日 | 2026-03-19 |
-| 修正日 | - |
+| 修正日 | 2026-03-19 |
 
 **内容:** `GetAvailableFolderNames`、`CollectFolderNames`、`SearchFolder`、`GetFolderMessageIds`、`SaveAttachments` 等で `Outlook.Stores`、`MAPIFolder`、`Folders`、`Items`、`Attachments`、`Attachment` の COM オブジェクトが `Marshal.ReleaseComObject` で解放されていない。大量メール処理時にメモリ増大や COM ランタイムエラーの原因になり得る。
 
-**対策:** ループ変数の COM オブジェクトを `Try...Finally Marshal.ReleaseComObject(obj) End Try` で都度解放する。特に `GetFolderMessageIds` の `rawItem` と `SaveAttachments` の `att` を優先。
+**対策:** 全14メソッドで COM オブジェクトの `Try...Finally Marshal.ReleaseComObject` パターンを適用。対象: GetAvailableFolderNames, GetExcludedFolderEntryIds, CollectFolderNames, FindFolder, SearchFolder, GetMailItemCount, GetFolderMessageIds, ExtractMessageId, ExtractEmailData (pa/recipients/parentFolder/mailAtts/att), SaveAttachments, ResolveExchangeAddress (entry/exUser), SerializeRecipients (r/addrEntry)。
 
-**メモ:** Dispose で `_ns` のみ解放し `_app` は意図的に残している設計は維持する。
+**メモ:** Dispose で `_ns` のみ解放し `_app` は意図的に残している設計は維持する。R-007 も同時完了。
 
 ---
 
@@ -148,19 +148,19 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | Medium |
 | カテゴリ | resource-management |
 | ソース | review |
 | 対象ファイル | OutlookVault/Services/OutlookService.vb |
 | 登録日 | 2026-03-19 |
-| 修正日 | - |
+| 修正日 | 2026-03-19 |
 
 **内容:** `IsFolderHidden`、`GetContainerClass`、`GetAttachmentContentId` で `folder.PropertyAccessor` / `att.PropertyAccessor` を取得しているが `Marshal.ReleaseComObject` が呼ばれていない。
 
-**対策:** 各メソッドで `Dim pa = ...; Try...Finally Marshal.ReleaseComObject(pa) End Try` で解放する。
+**対策:** R-001 と同時対応。`IsFolderHidden`、`GetContainerClass`、`GetAttachmentContentId`、`ExtractMessageId`、`ExtractEmailData` の各 PropertyAccessor に `Try...Finally Marshal.ReleaseComObject(pa)` を適用。
 
-**メモ:** R-001 と関連。同時対応を検討。OutlookService.vb 行 144〜163、行 535
+**メモ:** R-001 と同時完了。
 
 ---
 
@@ -351,3 +351,4 @@
 | 2026-03-19 | R-002 | done: String→Enum SynchronousMode に変更、テスト追加 |
 | 2026-03-19 | R-003 | done: IDisposable 実装、MainForm.Dispose で解放 |
 | 2026-03-19 | R-004 | done: DeleteSelectedEmails を DeleteEmailsByIds に置き換え |
+| 2026-03-19 | R-001, R-007 | done: OutlookService 全14メソッドの COM オブジェクト解放を一括対応 |
