@@ -241,12 +241,13 @@ SELECT last_insert_rowid();"
         '  Email 取得
         ' ════════════════════════════════════════════════════════════
 
-        ''' <summary>一覧表示用に軽量なカラムのみ取得する（本文を除外）。</summary>
+        ''' <summary>一覧表示用に軽量なカラムのみ取得する（本文を除外）。論理削除済みは除外。</summary>
         Public Function GetEmailsForList(Optional folderName As String = Nothing) As List(Of Models.Email)
             Dim sb As New StringBuilder(
                 "SELECT id, subject, sender_name, sender_email, received_at, has_attachments, email_size, thread_id FROM emails")
+            sb.Append(" WHERE deleted_at IS NULL")
             If Not String.IsNullOrEmpty(folderName) Then
-                sb.Append(" WHERE folder_name = @folder_name")
+                sb.Append(" AND folder_name = @folder_name")
             End If
             sb.Append(" ORDER BY received_at DESC")
 
@@ -266,16 +267,16 @@ SELECT last_insert_rowid();"
             Return result
         End Function
 
-        ''' <summary>フォルダ指定でメール一覧を取得する（受信日時降順）。</summary>
+        ''' <summary>フォルダ指定でメール一覧を取得する（受信日時降順）。論理削除済みは除外。</summary>
         ''' <param name="folderName">フォルダ名。Nothing の場合はすべて。</param>
         ''' <param name="pageIndex">ページ番号（0始まり）。pageSize &lt;= 0 の場合は無視。</param>
         ''' <param name="pageSize">ページサイズ。0 以下の場合は全件取得。</param>
         Public Function GetEmails(Optional folderName As String = Nothing,
                                   Optional pageIndex As Integer = 0,
                                   Optional pageSize As Integer = 0) As List(Of Models.Email)
-            Dim sb As New StringBuilder("SELECT * FROM emails")
+            Dim sb As New StringBuilder("SELECT * FROM emails WHERE deleted_at IS NULL")
             If Not String.IsNullOrEmpty(folderName) Then
-                sb.Append(" WHERE folder_name = @folder_name")
+                sb.Append(" AND folder_name = @folder_name")
             End If
             sb.Append(" ORDER BY received_at DESC")
             If pageSize > 0 Then
@@ -316,9 +317,9 @@ SELECT last_insert_rowid();"
             Return Nothing
         End Function
 
-        ''' <summary>同一スレッドのメールを時系列昇順で取得する。</summary>
+        ''' <summary>同一スレッドのメールを時系列昇順で取得する。論理削除済みは除外。</summary>
         Public Function GetEmailsByThreadId(threadId As String) As List(Of Models.Email)
-            Const sql As String = "SELECT * FROM emails WHERE thread_id = @thread_id ORDER BY received_at ASC"
+            Const sql As String = "SELECT * FROM emails WHERE thread_id = @thread_id AND deleted_at IS NULL ORDER BY received_at ASC"
             Dim result As New List(Of Models.Email)
             Using conn As SQLiteConnection = _dbManager.GetConnection()
                 Using cmd As New SQLiteCommand(sql, conn)
@@ -333,9 +334,9 @@ SELECT last_insert_rowid();"
             Return result
         End Function
 
-        ''' <summary>DB に存在するフォルダ名の一覧を取得する。</summary>
+        ''' <summary>DB に存在するフォルダ名の一覧を取得する。論理削除済みは除外。</summary>
         Public Function GetFolderNames() As List(Of String)
-            Const sql As String = "SELECT DISTINCT folder_name FROM emails WHERE folder_name IS NOT NULL ORDER BY folder_name"
+            Const sql As String = "SELECT DISTINCT folder_name FROM emails WHERE folder_name IS NOT NULL AND deleted_at IS NULL ORDER BY folder_name"
             Dim result As New List(Of String)
             Using conn As SQLiteConnection = _dbManager.GetConnection()
                 Using cmd As New SQLiteCommand(sql, conn)
@@ -350,13 +351,13 @@ SELECT last_insert_rowid();"
         End Function
 
         ''' <summary>
-        ''' フォルダ別の件数と全体件数を1クエリで取得する。
+        ''' フォルダ別の件数と全体件数を1クエリで取得する。論理削除済みは除外。
         ''' Item1: 全体件数、Item2: フォルダ名→件数の Dictionary。
         ''' </summary>
         Public Function GetFolderCounts() As Tuple(Of Integer, Dictionary(Of String, Integer))
             Dim folders As New Dictionary(Of String, Integer)()
             Dim total As Integer = 0
-            Const sql As String = "SELECT folder_name, COUNT(1) FROM emails WHERE folder_name IS NOT NULL GROUP BY folder_name ORDER BY folder_name"
+            Const sql As String = "SELECT folder_name, COUNT(1) FROM emails WHERE folder_name IS NOT NULL AND deleted_at IS NULL GROUP BY folder_name ORDER BY folder_name"
             Using conn As SQLiteConnection = _dbManager.GetConnection()
                 Using cmd As New SQLiteCommand(sql, conn)
                     Using reader As SQLiteDataReader = cmd.ExecuteReader()
@@ -369,20 +370,20 @@ SELECT last_insert_rowid();"
                     End Using
                 End Using
                 ' folder_name が NULL のレコード数を加算
-                Using cmd2 As New SQLiteCommand("SELECT COUNT(1) FROM emails WHERE folder_name IS NULL", conn)
+                Using cmd2 As New SQLiteCommand("SELECT COUNT(1) FROM emails WHERE folder_name IS NULL AND deleted_at IS NULL", conn)
                     total += Convert.ToInt32(cmd2.ExecuteScalar())
                 End Using
             End Using
             Return Tuple.Create(total, folders)
         End Function
 
-        ''' <summary>フォルダ指定可能なメール総数を返す。</summary>
+        ''' <summary>フォルダ指定可能なメール総数を返す。論理削除済みは除外。</summary>
         Public Function GetTotalCount(Optional folderName As String = Nothing) As Integer
             Dim sql As String
             If String.IsNullOrEmpty(folderName) Then
-                sql = "SELECT COUNT(1) FROM emails"
+                sql = "SELECT COUNT(1) FROM emails WHERE deleted_at IS NULL"
             Else
-                sql = "SELECT COUNT(1) FROM emails WHERE folder_name = @folder_name"
+                sql = "SELECT COUNT(1) FROM emails WHERE deleted_at IS NULL AND folder_name = @folder_name"
             End If
             Using conn As SQLiteConnection = _dbManager.GetConnection()
                 Using cmd As New SQLiteCommand(sql, conn)
@@ -394,9 +395,9 @@ SELECT last_insert_rowid();"
             End Using
         End Function
 
-        ''' <summary>最終取り込み日時（emails.created_at の最大値）を返す。レコードがない場合は Nothing。</summary>
+        ''' <summary>最終取り込み日時（emails.created_at の最大値）を返す。論理削除済みは除外。レコードがない場合は Nothing。</summary>
         Public Function GetLastImportDate() As DateTime?
-            Const sql As String = "SELECT MAX(created_at) FROM emails"
+            Const sql As String = "SELECT MAX(created_at) FROM emails WHERE deleted_at IS NULL"
             Using conn As SQLiteConnection = _dbManager.GetConnection()
                 Using cmd As New SQLiteCommand(sql, conn)
                     Dim result As Object = cmd.ExecuteScalar()
@@ -473,7 +474,7 @@ SELECT last_insert_rowid();"
         End Function
 
         ''' <summary>
-        ''' EmailSearchFilter を使用してメールを検索する。
+        ''' EmailSearchFilter を使用してメールを検索する。論理削除済みは除外。
         ''' 列指定・AND/OR・添付有無などの高度なフィルタ構文に対応。
         ''' </summary>
         Public Function SearchEmailsFiltered(query As String,
@@ -486,8 +487,11 @@ SELECT last_insert_rowid();"
                 "SELECT e2.id, e2.subject, e2.sender_name, e2.sender_email, e2.received_at, e2.has_attachments, e2.email_size, e2.thread_id" &
                 " FROM emails e2 INNER JOIN (SELECT DISTINCT e.id FROM emails e")
             If Not String.IsNullOrEmpty(sq.WhereClause) Then
-                sb.Append(" WHERE ")
+                sb.Append(" WHERE e.deleted_at IS NULL AND (")
                 sb.Append(sq.WhereClause)
+                sb.Append(")")
+            Else
+                sb.Append(" WHERE e.deleted_at IS NULL")
             End If
             sb.Append(") matched ON e2.id = matched.id ORDER BY e2.received_at DESC")
 
@@ -580,10 +584,10 @@ SELECT last_insert_rowid();"
 
         ''' <summary>
         ''' 指定フォルダの取り込み済みメールの message_id と id の Dictionary を返す。
-        ''' 削除同期で Outlook 側と突合するために使用する。
+        ''' 削除同期で Outlook 側と突合するために使用する。論理削除済みは除外。
         ''' </summary>
         Public Function GetMessageIdsByFolder(folderName As String) As Dictionary(Of String, Integer)
-            Const sql As String = "SELECT message_id, id FROM emails WHERE folder_name = @folder_name AND message_id IS NOT NULL"
+            Const sql As String = "SELECT message_id, id FROM emails WHERE folder_name = @folder_name AND message_id IS NOT NULL AND deleted_at IS NULL"
             Dim result As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
             Using conn As SQLiteConnection = _dbManager.GetConnection()
                 Using cmd As New SQLiteCommand(sql, conn)
@@ -603,11 +607,53 @@ SELECT last_insert_rowid();"
         End Function
 
         ''' <summary>
-        ''' 複数メールを一括削除し、削除対象の添付ファイルパス一覧を返す。
+        ''' 複数メールをゴミ箱に移動する（論理削除）。
+        ''' </summary>
+        Public Sub SoftDeleteEmailsByIds(ids As List(Of Integer))
+            If ids Is Nothing OrElse ids.Count = 0 Then Return
+
+            Using conn As SQLiteConnection = _dbManager.GetConnection()
+                Using tx As SQLiteTransaction = conn.BeginTransaction()
+                    Using cmd As New SQLiteCommand(
+                        "UPDATE emails SET deleted_at = datetime('now', 'localtime') WHERE id = @id", conn)
+                        cmd.Parameters.Add("@id", System.Data.DbType.Int32)
+                        For Each emailId As Integer In ids
+                            cmd.Parameters("@id").Value = CType(emailId, Object)
+                            cmd.ExecuteNonQuery()
+                        Next
+                    End Using
+                    tx.Commit()
+                End Using
+            End Using
+        End Sub
+
+        ''' <summary>
+        ''' ゴミ箱のメールを復元する（論理削除を取り消す）。
+        ''' </summary>
+        Public Sub RestoreEmailsByIds(ids As List(Of Integer))
+            If ids Is Nothing OrElse ids.Count = 0 Then Return
+
+            Using conn As SQLiteConnection = _dbManager.GetConnection()
+                Using tx As SQLiteTransaction = conn.BeginTransaction()
+                    Using cmd As New SQLiteCommand(
+                        "UPDATE emails SET deleted_at = NULL WHERE id = @id", conn)
+                        cmd.Parameters.Add("@id", System.Data.DbType.Int32)
+                        For Each emailId As Integer In ids
+                            cmd.Parameters("@id").Value = CType(emailId, Object)
+                            cmd.ExecuteNonQuery()
+                        Next
+                    End Using
+                    tx.Commit()
+                End Using
+            End Using
+        End Sub
+
+        ''' <summary>
+        ''' 複数メールを完全に削除し、削除対象の添付ファイルパス一覧を返す。
         ''' トゥームストーンへの登録も行う。
         ''' ON DELETE CASCADE で attachments レコードは自動削除される。
         ''' </summary>
-        Public Function DeleteEmailsByIds(ids As List(Of Integer)) As List(Of String)
+        Public Function PurgeEmailsByIds(ids As List(Of Integer)) As List(Of String)
             Dim attachmentPaths As New List(Of String)()
             If ids Is Nothing OrElse ids.Count = 0 Then Return attachmentPaths
 
@@ -656,6 +702,66 @@ SELECT last_insert_rowid();"
             Return attachmentPaths
         End Function
 
+        ''' <summary>ゴミ箱内のメール一覧を取得する（論理削除済み）。</summary>
+        Public Function GetTrashEmails() As List(Of Models.Email)
+            Const sql As String =
+                "SELECT id, subject, sender_name, sender_email, received_at, has_attachments, email_size, thread_id FROM emails" &
+                " WHERE deleted_at IS NOT NULL ORDER BY deleted_at DESC"
+
+            Dim result As New List(Of Models.Email)()
+            Using conn As SQLiteConnection = _dbManager.GetConnection()
+                Using cmd As New SQLiteCommand(sql, conn)
+                    Using reader As SQLiteDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            result.Add(MapEmailSummary(reader))
+                        End While
+                    End Using
+                End Using
+            End Using
+            Return result
+        End Function
+
+        ''' <summary>ゴミ箱内のメール件数を返す。</summary>
+        Public Function GetTrashCount() As Integer
+            Const sql As String = "SELECT COUNT(1) FROM emails WHERE deleted_at IS NOT NULL"
+            Using conn As SQLiteConnection = _dbManager.GetConnection()
+                Using cmd As New SQLiteCommand(sql, conn)
+                    Return Convert.ToInt32(cmd.ExecuteScalar())
+                End Using
+            End Using
+        End Function
+
+        ''' <summary>
+        ''' 指定日数以上前にゴミ箱に入ったメールを完全削除し、添付ファイルパス一覧を返す。
+        ''' days が 0 以下の場合は何もしない。
+        ''' </summary>
+        Public Function PurgeExpiredTrash(days As Integer) As List(Of String)
+            Dim attachmentPaths As New List(Of String)()
+            If days <= 0 Then Return attachmentPaths
+
+            ' 期限切れのメール ID を取得
+            Dim expiredIds As New List(Of Integer)()
+            Dim cutoff As String = DateTime.Now.AddDays(-days).ToString("yyyy-MM-dd HH:mm:ss")
+
+            Using conn As SQLiteConnection = _dbManager.GetConnection()
+                Using cmd As New SQLiteCommand(
+                    "SELECT id FROM emails WHERE deleted_at IS NOT NULL AND deleted_at <= @cutoff", conn)
+                    cmd.Parameters.AddWithValue("@cutoff", cutoff)
+                    Using reader As SQLiteDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            expiredIds.Add(reader.GetInt32(0))
+                        End While
+                    End Using
+                End Using
+            End Using
+
+            If expiredIds.Count > 0 Then
+                attachmentPaths = PurgeEmailsByIds(expiredIds)
+            End If
+
+            Return attachmentPaths
+        End Function
+
         ''' <summary>同一 MessageID がすでに DB に存在するか確認する（重複取り込み防止）。</summary>
         Public Function MessageIdExists(messageId As String) As Boolean
             Const sql As String = "SELECT COUNT(1) FROM emails WHERE message_id = @message_id"
@@ -679,17 +785,10 @@ SELECT last_insert_rowid();"
         End Function
 
         ''' <summary>
-        ''' メールを DB から削除し、MessageID をトゥームストーンに記録する。
-        ''' ON DELETE CASCADE で添付ファイルレコードも自動削除される。
+        ''' メールをゴミ箱に移動する（論理削除）。
         ''' </summary>
-        Public Sub DeleteEmail(id As Integer)
-            ' まず MessageID を取得してトゥームストーンに登録
-            Dim email As Models.Email = GetEmailById(id)
-            If email IsNot Nothing AndAlso Not String.IsNullOrEmpty(email.MessageId) Then
-                MarkMessageIdAsDeleted(email.MessageId)
-            End If
-
-            Const sql As String = "DELETE FROM emails WHERE id = @id"
+        Public Sub SoftDeleteEmail(id As Integer)
+            Const sql As String = "UPDATE emails SET deleted_at = datetime('now', 'localtime') WHERE id = @id"
             Using conn As SQLiteConnection = _dbManager.GetConnection()
                 Using cmd As New SQLiteCommand(sql, conn)
                     cmd.Parameters.AddWithValue("@id", CType(id, Object))

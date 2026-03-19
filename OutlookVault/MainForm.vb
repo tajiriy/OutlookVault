@@ -53,8 +53,11 @@ Public Class MainForm
     ' _autoImportTimer, _scheduledImportTimer は Designer.vb で宣言・生成
     Private _lastScheduledRunDate As DateTime = DateTime.MinValue
 
+    Private Const TrashFolderTag As String = "__TRASH__"  ' ゴミ箱ノードの Tag 識別子
+
     Private _emailCache As List(Of Models.Email)
     Private _currentFolder As String      ' Nothing = すべて
+    Private _isTrashView As Boolean       ' True = ゴミ箱表示中
     Private _isImporting As Boolean
     Private _importCts As System.Threading.CancellationTokenSource
     Private _lastOutlookTotalCount As Integer = -1  ' -1 = 未取得
@@ -93,8 +96,12 @@ Public Class MainForm
         SetupNotifyIcon()
         SetupEmailListColumns()
         SetupToggleViewButton()
+        UpdateContextMenuForView()
         LoadFolderTree()
         Await UpdateStatusBarAsync()
+
+        ' ゴミ箱の自動パージ
+        PurgeExpiredTrashOnStartup()
 
         Services.Logger.Info("初期化が完了しました")
 
@@ -195,17 +202,44 @@ Public Class MainForm
             treeViewFolders.Nodes.Add(node)
         Next
 
+        ' ゴミ箱ノード
+        Dim trashCount As Integer = _repo.GetTrashCount()
+        Dim nodeTrash As New TreeNode(String.Format("ゴミ箱 ({0:N0})", trashCount))
+        nodeTrash.Tag = TrashFolderTag
+        treeViewFolders.Nodes.Add(nodeTrash)
+
         treeViewFolders.EndUpdate()
         treeViewFolders.SelectedNode = nodeAll
+    End Sub
+
+    ''' <summary>フォルダツリーの右クリックでゴミ箱ノードのコンテキストメニューを表示する。</summary>
+    Private Sub treeViewFolders_NodeMouseClick(sender As Object, e As TreeNodeMouseClickEventArgs) Handles treeViewFolders.NodeMouseClick
+        If e.Button = MouseButtons.Right Then
+            treeViewFolders.SelectedNode = e.Node
+            Dim tag As String = TryCast(e.Node.Tag, String)
+            If String.Equals(tag, TrashFolderTag, StringComparison.Ordinal) Then
+                folderContextMenu.Show(treeViewFolders, e.Location)
+            End If
+        End If
     End Sub
 
     Private Async Sub treeViewFolders_AfterSelect(sender As Object, e As TreeViewEventArgs) Handles treeViewFolders.AfterSelect
         If e.Node Is Nothing Then Return
         If _updatingFolderCounts Then Return
-        _currentFolder = TryCast(e.Node.Tag, String)
+
+        Dim tag As String = TryCast(e.Node.Tag, String)
+        _isTrashView = String.Equals(tag, TrashFolderTag, StringComparison.Ordinal)
+
+        If _isTrashView Then
+            _currentFolder = Nothing
+        Else
+            _currentFolder = tag
+        End If
+
         ' 検索ボックスと検索クエリをクリアしてフォルダ切り替え
         txtSearch.Text = String.Empty
         _searchQuery = Nothing
+        UpdateContextMenuForView()
         Await LoadEmailsAsync(_currentFolder)
     End Sub
 
@@ -222,9 +256,14 @@ Public Class MainForm
         _loadVersion += 1
         Dim myVersion As Integer = _loadVersion
         Dim repo As Data.EmailRepository = _repo
+        Dim isTrash As Boolean = _isTrashView
         Dim emails As List(Of Models.Email) = Await Task.Run(
             Function() As List(Of Models.Email)
-                Return repo.GetEmailsForList(folderName)
+                If isTrash Then
+                    Return repo.GetTrashEmails()
+                Else
+                    Return repo.GetEmailsForList(folderName)
+                End If
             End Function)
 
         ' 待機中に別のロードが開始された場合は結果を破棄する
@@ -732,7 +771,7 @@ Public Class MainForm
     '  削除
     ' ════════════════════════════════════════════════════════════
 
-    ''' <summary>メール一覧で選択中のメールを削除する（添付ファイル実体も削除）。</summary>
+    ''' <summary>メール一覧で選択中のメールをゴミ箱に移動する（論理削除）。</summary>
     Private Async Sub DeleteSelectedEmails()
         If listViewEmails.SelectedIndices.Count = 0 Then Return
 
@@ -746,39 +785,165 @@ Public Class MainForm
 
         Dim msg As String
         If selectedIds.Count = 1 Then
-            msg = "選択したメールを削除しますか？" & vbCrLf &
+            msg = "選択したメールをゴミ箱に移動しますか？"
+        Else
+            msg = String.Format("選択した {0} 件のメールをゴミ箱に移動しますか？", selectedIds.Count)
+        End If
+
+        If MessageBox.Show(msg, "ゴミ箱に移動",
+                           MessageBoxButtons.YesNo,
+                           MessageBoxIcon.Question,
+                           MessageBoxDefaultButton.Button2) <> DialogResult.Yes Then
+            Return
+        End If
+
+        emailPreview.ClearPreview()
+        conversationView.ClearView()
+
+        _repo.SoftDeleteEmailsByIds(selectedIds)
+        Await LoadEmailsAsync(_currentFolder)
+        LoadFolderTree()
+    End Sub
+
+    ''' <summary>ゴミ箱で選択中のメールを復元する。</summary>
+    Private Async Sub RestoreSelectedEmails()
+        If listViewEmails.SelectedIndices.Count = 0 Then Return
+
+        Dim selectedIds As New List(Of Integer)()
+        For Each idx As Integer In listViewEmails.SelectedIndices
+            If idx >= 0 AndAlso idx < _emailCache.Count Then
+                selectedIds.Add(_emailCache(idx).Id)
+            End If
+        Next
+        If selectedIds.Count = 0 Then Return
+
+        _repo.RestoreEmailsByIds(selectedIds)
+
+        emailPreview.ClearPreview()
+        conversationView.ClearView()
+        Await LoadEmailsAsync(_currentFolder)
+        LoadFolderTree()
+    End Sub
+
+    ''' <summary>ゴミ箱で選択中のメールを完全に削除する（物理削除）。</summary>
+    Private Async Sub PurgeSelectedEmails()
+        If listViewEmails.SelectedIndices.Count = 0 Then Return
+
+        Dim selectedIds As New List(Of Integer)()
+        For Each idx As Integer In listViewEmails.SelectedIndices
+            If idx >= 0 AndAlso idx < _emailCache.Count Then
+                selectedIds.Add(_emailCache(idx).Id)
+            End If
+        Next
+        If selectedIds.Count = 0 Then Return
+
+        Dim msg As String
+        If selectedIds.Count = 1 Then
+            msg = "選択したメールを完全に削除しますか？" & vbCrLf &
                   "添付ファイルも削除されます。この操作は元に戻せません。"
         Else
-            msg = String.Format("選択した {0} 件のメールを削除しますか？" & vbCrLf &
+            msg = String.Format("選択した {0} 件のメールを完全に削除しますか？" & vbCrLf &
                   "添付ファイルも削除されます。この操作は元に戻せません。", selectedIds.Count)
         End If
 
-        If MessageBox.Show(msg, "削除の確認",
+        If MessageBox.Show(msg, "完全削除の確認",
                            MessageBoxButtons.YesNo,
                            MessageBoxIcon.Warning,
                            MessageBoxDefaultButton.Button2) <> DialogResult.Yes Then
             Return
         End If
 
-        ' プレビューをクリア
         emailPreview.ClearPreview()
         conversationView.ClearView()
 
-        ' DB から一括削除（トゥームストーン記録・CASCADE 含む）し、添付ファイルパスを取得
-        Dim attachmentPaths As List(Of String) = _repo.DeleteEmailsByIds(selectedIds)
-
-        ' 添付ファイルの物理削除
+        Dim attachmentPaths As List(Of String) = _repo.PurgeEmailsByIds(selectedIds)
         For Each filePath As String In attachmentPaths
             If IO.File.Exists(filePath) Then
                 Try
                     IO.File.Delete(filePath)
                 Catch
-                    ' 物理削除失敗は無視（DB 削除は既に完了）
                 End Try
             End If
         Next
 
         Await LoadEmailsAsync(_currentFolder)
+        LoadFolderTree()
+    End Sub
+
+    ''' <summary>ゴミ箱を空にする。</summary>
+    Private Async Sub EmptyTrash()
+        Dim trashCount As Integer = _repo.GetTrashCount()
+        If trashCount = 0 Then
+            MessageBox.Show("ゴミ箱は空です。", "ゴミ箱を空にする", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        If MessageBox.Show(
+                String.Format("ゴミ箱内の {0} 件のメールを完全に削除しますか？" & vbCrLf &
+                              "添付ファイルも削除されます。この操作は元に戻せません。", trashCount),
+                "ゴミ箱を空にする",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2) <> DialogResult.Yes Then
+            Return
+        End If
+
+        emailPreview.ClearPreview()
+        conversationView.ClearView()
+
+        ' ゴミ箱内の全メール ID を取得して物理削除
+        Dim trashEmails As List(Of Models.Email) = _repo.GetTrashEmails()
+        Dim trashIds As New List(Of Integer)()
+        For Each email As Models.Email In trashEmails
+            trashIds.Add(email.Id)
+        Next
+
+        Dim attachmentPaths As List(Of String) = _repo.PurgeEmailsByIds(trashIds)
+        For Each filePath As String In attachmentPaths
+            If IO.File.Exists(filePath) Then
+                Try
+                    IO.File.Delete(filePath)
+                Catch
+                End Try
+            End If
+        Next
+
+        Await LoadEmailsAsync(_currentFolder)
+        LoadFolderTree()
+    End Sub
+
+    ''' <summary>起動時にゴミ箱の期限切れメールを自動パージする。</summary>
+    Private Sub PurgeExpiredTrashOnStartup()
+        Dim days As Integer = _settings.TrashAutoDeleteDays
+        If days <= 0 Then Return
+
+        Try
+            Dim attachmentPaths As List(Of String) = _repo.PurgeExpiredTrash(days)
+            If attachmentPaths.Count > 0 Then
+                For Each filePath As String In attachmentPaths
+                    If IO.File.Exists(filePath) Then
+                        Try
+                            IO.File.Delete(filePath)
+                        Catch
+                        End Try
+                    End If
+                Next
+                Services.Logger.Info(String.Format("ゴミ箱の自動パージが完了しました（{0}日経過分）", days))
+            End If
+        Catch ex As Exception
+            Services.Logger.Warn("ゴミ箱の自動パージに失敗しました: " & ex.Message)
+        End Try
+    End Sub
+
+    ''' <summary>コンテキストメニューをゴミ箱表示と通常表示で切り替える。</summary>
+    Private Sub UpdateContextMenuForView()
+        listViewContextMenu.Items.Clear()
+        If _isTrashView Then
+            listViewContextMenu.Items.Add(restoreMenuItem)
+            listViewContextMenu.Items.Add(purgeMenuItem)
+        Else
+            listViewContextMenu.Items.Add(deleteMenuItem)
+        End If
     End Sub
 
     ''' <summary>コンテキストメニュー「削除」クリック。</summary>
@@ -786,10 +951,29 @@ Public Class MainForm
         DeleteSelectedEmails()
     End Sub
 
+    ''' <summary>コンテキストメニュー「復元」クリック。</summary>
+    Private Sub OnRestoreEmailMenuClick(sender As Object, e As EventArgs) Handles restoreMenuItem.Click
+        RestoreSelectedEmails()
+    End Sub
+
+    ''' <summary>コンテキストメニュー「完全に削除」クリック。</summary>
+    Private Sub OnPurgeEmailMenuClick(sender As Object, e As EventArgs) Handles purgeMenuItem.Click
+        PurgeSelectedEmails()
+    End Sub
+
+    ''' <summary>コンテキストメニュー「ゴミ箱を空にする」クリック。</summary>
+    Private Sub OnEmptyTrashMenuClick(sender As Object, e As EventArgs) Handles emptyTrashMenuItem.Click
+        EmptyTrash()
+    End Sub
+
     ''' <summary>メール一覧で Delete キーが押されたときに選択メールを削除する。</summary>
     Private Sub listViewEmails_KeyDown(sender As Object, e As KeyEventArgs) Handles listViewEmails.KeyDown
         If e.KeyCode = Keys.Delete Then
-            DeleteSelectedEmails()
+            If _isTrashView Then
+                PurgeSelectedEmails()
+            Else
+                DeleteSelectedEmails()
+            End If
             e.Handled = True
         ElseIf e.Control AndAlso e.KeyCode = Keys.A Then
             ' VirtualMode では Ctrl+A が自動で動作しないため Win32 API で一括全選択
@@ -856,6 +1040,8 @@ Public Class MainForm
                     For Each kvp As KeyValuePair(Of String, Integer) In counts.Item2
                         result.Add(Tuple.Create(kvp.Key, kvp.Value))
                     Next
+                    ' ゴミ箱を末尾に配置
+                    result.Add(Tuple.Create(TrashFolderTag, repo.GetTrashCount()))
                 Catch ex As Exception
                     Services.Logger.Warn("フォルダ件数の取得に失敗しました: " & ex.Message)
                 End Try
@@ -866,7 +1052,7 @@ Public Class MainForm
         If folderData.Count = 0 Then Return
 
         _updatingFolderCounts = True
-        Dim selectedTag As String = _currentFolder
+        Dim selectedTag As String = If(_isTrashView, TrashFolderTag, _currentFolder)
         treeViewFolders.BeginUpdate()
         treeViewFolders.Nodes.Clear()
 
@@ -874,6 +1060,8 @@ Public Class MainForm
             Dim displayName As String
             If item.Item1 Is Nothing Then
                 displayName = String.Format("すべて ({0:N0})", item.Item2)
+            ElseIf String.Equals(item.Item1, TrashFolderTag, StringComparison.Ordinal) Then
+                displayName = String.Format("ゴミ箱 ({0:N0})", item.Item2)
             Else
                 displayName = String.Format("{0} ({1:N0})", item.Item1, item.Item2)
             End If

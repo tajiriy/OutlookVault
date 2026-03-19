@@ -47,6 +47,7 @@ Namespace Data
                 ExecuteNonQuery(conn, "PRAGMA journal_mode=WAL;")
 
                 CreateTables(conn)
+                RunMigrations(conn)
                 CreateIndices(conn)
             End Using
         End Sub
@@ -77,7 +78,8 @@ CREATE TABLE IF NOT EXISTS emails (
     has_attachments    INTEGER DEFAULT 0,
     email_size         INTEGER DEFAULT 0,
     created_at         TEXT DEFAULT (datetime('now', 'localtime')),
-    updated_at         TEXT DEFAULT (datetime('now', 'localtime'))
+    updated_at         TEXT DEFAULT (datetime('now', 'localtime')),
+    deleted_at         TEXT
 );
 
 CREATE TABLE IF NOT EXISTS attachments (
@@ -133,9 +135,34 @@ CREATE INDEX IF NOT EXISTS idx_emails_message_id         ON emails(message_id);
 CREATE INDEX IF NOT EXISTS idx_emails_thread_id          ON emails(thread_id);
 CREATE INDEX IF NOT EXISTS idx_emails_in_reply_to        ON emails(in_reply_to);
 CREATE INDEX IF NOT EXISTS idx_emails_folder             ON emails(folder_name);
-CREATE INDEX IF NOT EXISTS idx_attachments_email_id      ON attachments(email_id);"
+CREATE INDEX IF NOT EXISTS idx_attachments_email_id      ON attachments(email_id);
+CREATE INDEX IF NOT EXISTS idx_emails_deleted_at         ON emails(deleted_at);"
             ExecuteNonQuery(conn, sql)
         End Sub
+
+        ' ── マイグレーション ────────────────────────────────────────
+
+        ''' <summary>既存 DB に対するスキーマ変更を適用する（べき等）。</summary>
+        Private Sub RunMigrations(conn As SQLiteConnection)
+            ' v1.x → ゴミ箱機能: emails.deleted_at カラム追加
+            If Not ColumnExists(conn, "emails", "deleted_at") Then
+                ExecuteNonQuery(conn, "ALTER TABLE emails ADD COLUMN deleted_at TEXT;")
+            End If
+        End Sub
+
+        ''' <summary>指定テーブルに指定カラムが存在するか確認する。</summary>
+        Private Shared Function ColumnExists(conn As SQLiteConnection, tableName As String, columnName As String) As Boolean
+            Using cmd As New SQLiteCommand(String.Format("PRAGMA table_info({0});", tableName), conn)
+                Using reader As SQLiteDataReader = cmd.ExecuteReader()
+                    While reader.Read()
+                        If String.Equals(reader("name").ToString(), columnName, StringComparison.OrdinalIgnoreCase) Then
+                            Return True
+                        End If
+                    End While
+                End Using
+            End Using
+            Return False
+        End Function
 
         ' ── パフォーマンスチューニング ─────────────────────────────
 
@@ -187,7 +214,7 @@ CREATE INDEX IF NOT EXISTS idx_attachments_email_id      ON attachments(email_id
                 "SUBSTR(body_text, 1, {0}) AS body_text, " &
                 "SUBSTR(body_html, 1, {0}) AS body_html, " &
                 "received_at, sent_at, folder_name, has_attachments, email_size, " &
-                "created_at, updated_at FROM emails", TruncLen)
+                "created_at, updated_at, deleted_at FROM emails", TruncLen)
         End Function
 
         ' ── ユーティリティ ────────────────────────────────────────

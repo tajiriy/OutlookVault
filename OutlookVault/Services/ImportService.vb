@@ -436,21 +436,10 @@ Namespace Services
                 Return 0
             End If
 
-            ' 一括削除（添付ファイルパスも取得）
-            Dim attachmentPaths As List(Of String) = _repo.DeleteEmailsByIds(idsToDelete)
+            ' ゴミ箱に移動（論理削除）
+            _repo.SoftDeleteEmailsByIds(idsToDelete)
 
-            ' 添付ファイルの物理削除
-            For Each filePath As String In attachmentPaths
-                Try
-                    If IO.File.Exists(filePath) Then
-                        IO.File.Delete(filePath)
-                    End If
-                Catch
-                    ' 物理削除失敗は無視
-                End Try
-            Next
-
-            Logger.Info(String.Format("フォルダ '{0}' の削除同期が完了しました — {1}件削除", folderName, idsToDelete.Count))
+            Logger.Info(String.Format("フォルダ '{0}' の削除同期が完了しました — {1}件をゴミ箱に移動", folderName, idsToDelete.Count))
             Return idsToDelete.Count
 
             Finally

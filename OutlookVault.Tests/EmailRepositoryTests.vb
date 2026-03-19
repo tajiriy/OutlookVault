@@ -335,23 +335,68 @@ Namespace Tests
         End Sub
 
         ' ════════════════════════════════════════════════════════════
-        '  削除・トゥームストーン
+        '  論理削除（ゴミ箱）
         ' ════════════════════════════════════════════════════════════
 
         <Test>
-        Public Sub DeleteEmail_RemovesFromDb()
+        Public Sub SoftDeleteEmail_MovesToTrash()
             Dim id As Integer = _repo.InsertEmail(CreateTestEmail("del@example.com"))
 
-            _repo.DeleteEmail(id)
+            _repo.SoftDeleteEmail(id)
+
+            ' GetEmailById は論理削除でも取得できる（SELECT * に deleted_at フィルタなし）
+            Dim email As Email = _repo.GetEmailById(id)
+            Assert.IsNotNull(email)
+            ' ただし一覧からは除外される
+            Dim list As List(Of Email) = _repo.GetEmailsForList()
+            Assert.IsFalse(list.Exists(Function(e) e.Id = id))
+            ' ゴミ箱には表示される
+            Dim trash As List(Of Email) = _repo.GetTrashEmails()
+            Assert.IsTrue(trash.Exists(Function(e) e.Id = id))
+        End Sub
+
+        <Test>
+        Public Sub SoftDeleteEmailsByIds_MovesMultipleToTrash()
+            Dim id1 As Integer = _repo.InsertEmail(CreateTestEmail("del1@example.com"))
+            Dim id2 As Integer = _repo.InsertEmail(CreateTestEmail("del2@example.com"))
+            Dim id3 As Integer = _repo.InsertEmail(CreateTestEmail("keep@example.com"))
+
+            _repo.SoftDeleteEmailsByIds(New List(Of Integer)() From {id1, id2})
+
+            Assert.AreEqual(1, _repo.GetEmailsForList().Count)
+            Assert.AreEqual(2, _repo.GetTrashCount())
+        End Sub
+
+        <Test>
+        Public Sub RestoreEmailsByIds_RestoresFromTrash()
+            Dim id As Integer = _repo.InsertEmail(CreateTestEmail("restore@example.com"))
+            _repo.SoftDeleteEmailsByIds(New List(Of Integer)() From {id})
+            Assert.AreEqual(1, _repo.GetTrashCount())
+
+            _repo.RestoreEmailsByIds(New List(Of Integer)() From {id})
+
+            Assert.AreEqual(0, _repo.GetTrashCount())
+            Assert.AreEqual(1, _repo.GetEmailsForList().Count)
+        End Sub
+
+        ' ════════════════════════════════════════════════════════════
+        '  物理削除（パージ）・トゥームストーン
+        ' ════════════════════════════════════════════════════════════
+
+        <Test>
+        Public Sub PurgeEmailsByIds_RemovesFromDb()
+            Dim id As Integer = _repo.InsertEmail(CreateTestEmail("del@example.com"))
+
+            _repo.PurgeEmailsByIds(New List(Of Integer)() From {id})
 
             Assert.IsNull(_repo.GetEmailById(id))
         End Sub
 
         <Test>
-        Public Sub DeleteEmail_RecordsTombstone()
+        Public Sub PurgeEmailsByIds_RecordsTombstone()
             Dim id As Integer = _repo.InsertEmail(CreateTestEmail("del@example.com"))
 
-            _repo.DeleteEmail(id)
+            _repo.PurgeEmailsByIds(New List(Of Integer)() From {id})
 
             Assert.IsTrue(_repo.IsMessageIdDeleted("del@example.com"))
         End Sub
@@ -623,16 +668,16 @@ Namespace Tests
         End Sub
 
         ' ════════════════════════════════════════════════════════════
-        '  一括削除
+        '  一括物理削除（パージ）
         ' ════════════════════════════════════════════════════════════
 
         <Test>
-        Public Sub DeleteEmailsByIds_RemovesEmailsAndRecordsTombstones()
+        Public Sub PurgeEmailsByIds_RemovesEmailsAndRecordsTombstones()
             Dim id1 As Integer = _repo.InsertEmail(CreateTestEmail("del1@example.com"))
             Dim id2 As Integer = _repo.InsertEmail(CreateTestEmail("del2@example.com"))
             Dim id3 As Integer = _repo.InsertEmail(CreateTestEmail("keep@example.com"))
 
-            Dim paths As List(Of String) = _repo.DeleteEmailsByIds(New List(Of Integer)() From {id1, id2})
+            Dim paths As List(Of String) = _repo.PurgeEmailsByIds(New List(Of Integer)() From {id1, id2})
 
             ' 削除されていること
             Assert.IsNull(_repo.GetEmailById(id1))
@@ -646,7 +691,7 @@ Namespace Tests
         End Sub
 
         <Test>
-        Public Sub DeleteEmailsByIds_ReturnsAttachmentPaths()
+        Public Sub PurgeEmailsByIds_ReturnsAttachmentPaths()
             Dim emailId As Integer = _repo.InsertEmail(CreateTestEmail("att-del@example.com"))
             Dim att As New Attachment()
             att.EmailId = emailId
@@ -655,21 +700,21 @@ Namespace Tests
             att.FileSize = 1024
             _repo.InsertAttachment(att)
 
-            Dim paths As List(Of String) = _repo.DeleteEmailsByIds(New List(Of Integer)() From {emailId})
+            Dim paths As List(Of String) = _repo.PurgeEmailsByIds(New List(Of Integer)() From {emailId})
 
             Assert.AreEqual(1, paths.Count)
             Assert.IsTrue(paths(0).EndsWith("subdir\test.pdf"))
         End Sub
 
         <Test>
-        Public Sub DeleteEmailsByIds_EmptyList_NoError()
-            Dim paths As List(Of String) = _repo.DeleteEmailsByIds(New List(Of Integer)())
+        Public Sub PurgeEmailsByIds_EmptyList_NoError()
+            Dim paths As List(Of String) = _repo.PurgeEmailsByIds(New List(Of Integer)())
 
             Assert.AreEqual(0, paths.Count)
         End Sub
 
         <Test>
-        Public Sub DeleteEmailsByIds_CascadeDeletesAttachments()
+        Public Sub PurgeEmailsByIds_CascadeDeletesAttachments()
             Dim emailId As Integer = _repo.InsertEmail(CreateTestEmail("cascade@example.com"))
             Dim att As New Attachment()
             att.EmailId = emailId
@@ -678,7 +723,7 @@ Namespace Tests
             att.FileSize = 512
             _repo.InsertAttachment(att)
 
-            _repo.DeleteEmailsByIds(New List(Of Integer)() From {emailId})
+            _repo.PurgeEmailsByIds(New List(Of Integer)() From {emailId})
 
             ' attachments テーブルからも削除されていること
             Using conn As System.Data.SQLite.SQLiteConnection = _dbManager.GetConnection()
@@ -688,6 +733,21 @@ Namespace Tests
                     Assert.AreEqual(0, Convert.ToInt32(cmd.ExecuteScalar()))
                 End Using
             End Using
+        End Sub
+
+        ' ════════════════════════════════════════════════════════════
+        '  PurgeExpiredTrash
+        ' ════════════════════════════════════════════════════════════
+
+        <Test>
+        Public Sub PurgeExpiredTrash_ZeroDays_DoesNothing()
+            Dim id As Integer = _repo.InsertEmail(CreateTestEmail("trash@example.com"))
+            _repo.SoftDeleteEmail(id)
+
+            Dim paths As List(Of String) = _repo.PurgeExpiredTrash(0)
+
+            Assert.AreEqual(0, paths.Count)
+            Assert.AreEqual(1, _repo.GetTrashCount())
         End Sub
 
         ' ════════════════════════════════════════════════════════════

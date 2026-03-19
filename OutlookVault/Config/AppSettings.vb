@@ -227,6 +227,18 @@ Namespace Config
             End Set
         End Property
 
+        ' ── ゴミ箱 ────────────────────────────────────────────────
+
+        ''' <summary>ゴミ箱の自動削除日数（0 で自動削除無効、デフォルト: 30日）</summary>
+        Public Property TrashAutoDeleteDays As Integer
+            Get
+                Return GetInt("TrashAutoDeleteDays", defaultValue:=30)
+            End Get
+            Set(value As Integer)
+                SaveSetting("TrashAutoDeleteDays", value.ToString())
+            End Set
+        End Property
+
         ' ── 結果ダイアログ ────────────────────────────────────────
 
         ''' <summary>取り込み完了時に結果ダイアログを表示するか</summary>

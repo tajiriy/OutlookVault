@@ -59,6 +59,10 @@ Partial Class MainForm
         Me.colSize = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.listViewContextMenu = New System.Windows.Forms.ContextMenuStrip(Me.components)
         Me.deleteMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.restoreMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.purgeMenuItem = New System.Windows.Forms.ToolStripMenuItem()
+        Me.folderContextMenu = New System.Windows.Forms.ContextMenuStrip(Me.components)
+        Me.emptyTrashMenuItem = New System.Windows.Forms.ToolStripMenuItem()
         Me.emailImageList = New System.Windows.Forms.ImageList(Me.components)
         Me.tabControl = New System.Windows.Forms.TabControl()
         Me.tabPageNormal = New System.Windows.Forms.TabPage()
@@ -89,6 +93,7 @@ Partial Class MainForm
         Me.splitRight.Panel2.SuspendLayout()
         Me.splitRight.SuspendLayout()
         Me.listViewContextMenu.SuspendLayout()
+        Me.folderContextMenu.SuspendLayout()
         Me.tabControl.SuspendLayout()
         Me.tabPageNormal.SuspendLayout()
         Me.tabPageThread.SuspendLayout()
@@ -366,6 +371,30 @@ Partial Class MainForm
         Me.deleteMenuItem.Size = New System.Drawing.Size(114, 22)
         Me.deleteMenuItem.Text = "削除(&D)"
         '
+        'restoreMenuItem
+        '
+        Me.restoreMenuItem.Name = "restoreMenuItem"
+        Me.restoreMenuItem.Size = New System.Drawing.Size(160, 22)
+        Me.restoreMenuItem.Text = "復元(&R)"
+        '
+        'purgeMenuItem
+        '
+        Me.purgeMenuItem.Name = "purgeMenuItem"
+        Me.purgeMenuItem.Size = New System.Drawing.Size(160, 22)
+        Me.purgeMenuItem.Text = "完全に削除(&P)"
+        '
+        'folderContextMenu
+        '
+        Me.folderContextMenu.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.emptyTrashMenuItem})
+        Me.folderContextMenu.Name = "folderContextMenu"
+        Me.folderContextMenu.Size = New System.Drawing.Size(180, 26)
+        '
+        'emptyTrashMenuItem
+        '
+        Me.emptyTrashMenuItem.Name = "emptyTrashMenuItem"
+        Me.emptyTrashMenuItem.Size = New System.Drawing.Size(179, 22)
+        Me.emptyTrashMenuItem.Text = "ゴミ箱を空にする(&E)"
+        '
         'emailImageList
         '
         Me.emailImageList.ColorDepth = System.Windows.Forms.ColorDepth.Depth32Bit
@@ -527,6 +556,7 @@ Partial Class MainForm
         CType(Me.splitRight, System.ComponentModel.ISupportInitialize).EndInit()
         Me.splitRight.ResumeLayout(False)
         Me.listViewContextMenu.ResumeLayout(False)
+        Me.folderContextMenu.ResumeLayout(False)
         Me.tabControl.ResumeLayout(False)
         Me.tabPageNormal.ResumeLayout(False)
         Me.tabPageThread.ResumeLayout(False)
@@ -576,6 +606,10 @@ Partial Class MainForm
     Friend emailImageList As System.Windows.Forms.ImageList
     Friend WithEvents listViewContextMenu As System.Windows.Forms.ContextMenuStrip
     Friend WithEvents deleteMenuItem As System.Windows.Forms.ToolStripMenuItem
+    Friend WithEvents restoreMenuItem As System.Windows.Forms.ToolStripMenuItem
+    Friend WithEvents purgeMenuItem As System.Windows.Forms.ToolStripMenuItem
+    Friend WithEvents folderContextMenu As System.Windows.Forms.ContextMenuStrip
+    Friend WithEvents emptyTrashMenuItem As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents tabControl As System.Windows.Forms.TabControl
     Friend WithEvents tabPageNormal As System.Windows.Forms.TabPage
     Friend WithEvents tabPageThread As System.Windows.Forms.TabPage
