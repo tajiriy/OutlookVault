@@ -66,6 +66,7 @@ Public Class SettingsForm
         chkDefaultHtml.Checked = _settings.DefaultHtmlView
         chkSortAscending.Checked = _settings.ConversationSortAscending
         chkShowImportResult.Checked = _settings.ShowImportResult
+        chkShowImportErrorDialog.Checked = _settings.ShowImportErrorDialog
 
         chkStartWithWindows.Checked = _settings.StartWithWindows
         chkMinimizeToTray.Checked = _settings.MinimizeToTray
@@ -98,6 +99,7 @@ Public Class SettingsForm
         _settings.DefaultHtmlView = chkDefaultHtml.Checked
         _settings.ConversationSortAscending = chkSortAscending.Checked
         _settings.ShowImportResult = chkShowImportResult.Checked
+        _settings.ShowImportErrorDialog = chkShowImportErrorDialog.Checked
 
         _settings.StartWithWindows = chkStartWithWindows.Checked
         _settings.MinimizeToTray = chkMinimizeToTray.Checked

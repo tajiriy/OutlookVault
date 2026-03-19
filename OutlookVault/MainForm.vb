@@ -436,8 +436,9 @@ Public Class MainForm
                     msg &= vbCrLf & vbCrLf & "詳細はログファイルを参照:" & vbCrLf & logPath
                 End If
             End If
-            ' エラーがある場合は設定に関わらず表示。それ以外は ShowImportResult 設定に従う
-            If result.ErrorCount > 0 OrElse _settings.ShowImportResult Then
+            ' エラー時と正常時で別々の設定に従う
+            If (result.ErrorCount > 0 AndAlso _settings.ShowImportErrorDialog) OrElse
+               (result.ErrorCount = 0 AndAlso _settings.ShowImportResult) Then
                 MessageBox.Show(msg, "取り込み結果", MessageBoxButtons.OK, MessageBoxIcon.Information)
             End If
 

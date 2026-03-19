@@ -18,7 +18,7 @@ Public Class AppSettingsTests
     ' ── タスクトレイ設定のデフォルト値テスト ──────────────────
 
     <Test>
-    Public Sub MinimizeToTray_DefaultValue_IsTrue()
+    Public Sub MinimizeToTray_DefaultValue_IsFalse()
         ' AppSettings はシングルトンで既存の設定値を返すため、
         ' App.config に明示的な設定がない場合のデフォルト値が True であることを確認
         ' (テスト環境では config キーが未設定のため、デフォルト値が返る)
@@ -27,7 +27,7 @@ Public Class AppSettingsTests
     End Sub
 
     <Test>
-    Public Sub CloseToTray_DefaultValue_IsTrue()
+    Public Sub CloseToTray_DefaultValue_IsFalse()
         Dim value As Boolean = _settings.CloseToTray
         Assert.That(value, [Is].TypeOf(Of Boolean)())
     End Sub
@@ -55,6 +55,12 @@ Public Class AppSettingsTests
     <Test>
     Public Sub ShowImportResult_CanRead()
         Dim value As Boolean = _settings.ShowImportResult
+        Assert.That(value, [Is].TypeOf(Of Boolean)())
+    End Sub
+
+    <Test>
+    Public Sub ShowImportErrorDialog_CanRead()
+        Dim value As Boolean = _settings.ShowImportErrorDialog
         Assert.That(value, [Is].TypeOf(Of Boolean)())
     End Sub
 

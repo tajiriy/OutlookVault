@@ -52,7 +52,7 @@ Namespace Config
         ''' <summary>起動時に自動取り込みを開始するか</summary>
         Public Property AutoImportEnabled As Boolean
             Get
-                Return GetBool("AutoImportEnabled", defaultValue:=True)
+                Return GetBool("AutoImportEnabled", defaultValue:=False)
             End Get
             Set(value As Boolean)
                 SaveSetting("AutoImportEnabled", value.ToString())
@@ -165,7 +165,7 @@ Namespace Config
         ''' <summary>最小化時にタスクトレイに格納するか</summary>
         Public Property MinimizeToTray As Boolean
             Get
-                Return GetBool("MinimizeToTray", defaultValue:=True)
+                Return GetBool("MinimizeToTray", defaultValue:=False)
             End Get
             Set(value As Boolean)
                 SaveSetting("MinimizeToTray", value.ToString())
@@ -175,7 +175,7 @@ Namespace Config
         ''' <summary>閉じるボタンでタスクトレイに格納するか</summary>
         Public Property CloseToTray As Boolean
             Get
-                Return GetBool("CloseToTray", defaultValue:=True)
+                Return GetBool("CloseToTray", defaultValue:=False)
             End Get
             Set(value As Boolean)
                 SaveSetting("CloseToTray", value.ToString())
@@ -228,10 +228,20 @@ Namespace Config
         ''' <summary>取り込み完了時に結果ダイアログを表示するか</summary>
         Public Property ShowImportResult As Boolean
             Get
-                Return GetBool("ShowImportResult", defaultValue:=False)
+                Return GetBool("ShowImportResult", defaultValue:=True)
             End Get
             Set(value As Boolean)
                 SaveSetting("ShowImportResult", value.ToString())
+            End Set
+        End Property
+
+        ''' <summary>取り込みエラー時に結果ダイアログを表示するか</summary>
+        Public Property ShowImportErrorDialog As Boolean
+            Get
+                Return GetBool("ShowImportErrorDialog", defaultValue:=True)
+            End Get
+            Set(value As Boolean)
+                SaveSetting("ShowImportErrorDialog", value.ToString())
             End Set
         End Property
 
