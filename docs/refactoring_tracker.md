@@ -4,9 +4,9 @@
 
 | ステータス | 件数 |
 |-----------|------|
-| open      | 3    |
+| open      | 1    |
 | in-progress | 0  |
-| done      | 30   |
+| done      | 32   |
 | wontfix   | 4    |
 | deferred  | 2    |
 | invalid   | 1    |
@@ -708,19 +708,19 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | Medium |
 | カテゴリ | resource-management |
 | ソース | review |
 | 対象ファイル | OutlookVault/Services/ImportService.vb |
 | 登録日 | 2026-03-19 |
-| 修正日 | - |
+| 修正日 | 2026-03-19 |
 
 **内容:** 進捗用に folder.Items.Count を取得後、GetFolderMessageIds 内でも folder.Items が取得される。
 
-**対策:** GetFolderMessageIds に totalCount を ByRef で返すか設計整理。
+**対策:** `GetFolderMessageIds` に `Optional ByRef itemCount As Integer` パラメータを追加し、内部で取得済みの `items.Count` を返すようにした。`SyncDeletions` 側の `folder.Items` 取得を除去し、`GetFolderMessageIds` の `itemCount` で `totalItems` を受け取る形に変更。R-038 と同時対応。
 
-**メモ:** BUG-003
+**メモ:** BUG-003。修正日: 2026-03-19
 
 ---
 
@@ -768,19 +768,19 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | Medium |
 | カテゴリ | resource-management |
 | ソース | review |
 | 対象ファイル | OutlookVault/Services/ImportService.vb |
 | 登録日 | 2026-03-19 |
-| 修正日 | - |
+| 修正日 | 2026-03-19 |
 
 **内容:** FindFolder で取得した folder が SyncDeletions(行374) と ImportFolder(行125) で Marshal.ReleaseComObject されていない。
 
-**対策:** Try...Finally で folder を解放。
+**対策:** `ImportFolder` と `SyncDeletions` の両方で、`FindFolder` で取得した `folder` を `Try...Finally Marshal.ReleaseComObject(folder)` で囲んで確実に解放。早期 Return パス（folder Is Nothing）の後に Try を配置し、正常・異常いずれのパスでも Finally で解放される。R-035 と同時対応。
 
-**メモ:** BUG-006 の folder 解放分
+**メモ:** BUG-006 の folder 解放分。修正日: 2026-03-19
 
 ---
 
@@ -860,3 +860,4 @@
 | 2026-03-19 | R-037, R-039 | done: worktree 並列実行で Regex Compiled 化と ToLower 除去を同時対応 |
 | 2026-03-19 | R-034 | done: ShowImagePreview の frm/img を Try...Finally Dispose で保証 |
 | 2026-03-19 | R-036 | done: DateTime.Parse を TryParse に変更、パース失敗時 Logger.Warn |
+| 2026-03-19 | R-035, R-038 | done: SyncDeletions の folder.Items 2回取得を解消（GetFolderMessageIds に itemCount 追加）、ImportFolder/SyncDeletions の FindFolder 結果を Try...Finally で COM 解放 |
