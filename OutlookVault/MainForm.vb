@@ -756,6 +756,12 @@ Public Class MainForm
         If e.KeyCode = Keys.Delete Then
             DeleteSelectedEmails()
             e.Handled = True
+        ElseIf e.Control AndAlso e.KeyCode = Keys.A Then
+            ' VirtualMode では Ctrl+A が自動で動作しないため手動で全選択
+            For i As Integer = 0 To listViewEmails.VirtualListSize - 1
+                listViewEmails.Items(i).Selected = True
+            Next
+            e.Handled = True
         End If
     End Sub
 

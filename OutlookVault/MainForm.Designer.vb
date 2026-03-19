@@ -317,6 +317,7 @@ Partial Class MainForm
         Me.listViewEmails.ContextMenuStrip = Me.listViewContextMenu
         Me.listViewEmails.Dock = System.Windows.Forms.DockStyle.Fill
         Me.listViewEmails.FullRowSelect = True
+        Me.listViewEmails.MultiSelect = True
         Me.listViewEmails.HideSelection = False
         Me.listViewEmails.Location = New System.Drawing.Point(0, 0)
         Me.listViewEmails.Name = "listViewEmails"
