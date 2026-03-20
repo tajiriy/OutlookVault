@@ -471,6 +471,14 @@ Namespace Services
                 Return result
             End If
 
+            ' HTML 本文を取得してインライン判定に使用する
+            Dim bodyHtml As String = Nothing
+            Try
+                bodyHtml = mailItem.HTMLBody
+            Catch
+                ' HTMLBody 取得失敗時は Nothing のまま（全添付を非インラインとして扱う）
+            End Try
+
             Dim dateStr As String = mailItem.ReceivedTime.ToString("yyyyMMdd_HHmmss")
             Dim shortId As String = GetShortId(mailItem.EntryID)
             Dim subDir As String = dateStr & "_" & shortId
@@ -509,7 +517,16 @@ Namespace Services
                             model.FilePath = Path.Combine(subDir, Path.GetFileName(targetPath))
                             model.FileSize = fi.Length
                             model.ContentId = contentId
-                            model.IsInline = Not String.IsNullOrEmpty(contentId)
+                            ' インライン判定:
+                            ' 1. ContentId があり HTML 本文中に cid:参照がある → インライン
+                            ' 2. ContentId があり画像ファイルである → インライン（装飾画像の推定）
+                            If String.IsNullOrEmpty(contentId) Then
+                                model.IsInline = False
+                            ElseIf Not String.IsNullOrEmpty(bodyHtml) AndAlso IsCidReferenced(bodyHtml, contentId) Then
+                                model.IsInline = True
+                            Else
+                                model.IsInline = IsImageExtension(originalName)
+                            End If
                             result.Add(model)
                         Catch ex As Exception
                             Dim errMsg As String = "添付保存エラー [" & originalName & "]: " & ex.Message
@@ -711,6 +728,42 @@ Namespace Services
                 ' Content-ID が未設定の添付ファイルでは例外が発生する（正常動作）
                 Return Nothing
             End Try
+        End Function
+
+        ''' <summary>
+        ''' HTML 本文中に cid:contentId への参照が完全一致で存在するかを判定する。
+        ''' 部分一致（例: cid:wm-qrcode が cid:wm-qrcode-mo にマッチ）を防止するため、
+        ''' cid: の直後に contentId があり、その後に引用符などの区切り文字が続くことを確認する。
+        ''' </summary>
+        Private Shared Function IsCidReferenced(bodyHtml As String, contentId As String) As Boolean
+            Dim searchToken As String = "cid:" & contentId
+            Dim startPos As Integer = 0
+            Do
+                Dim idx As Integer = bodyHtml.IndexOf(searchToken, startPos, StringComparison.OrdinalIgnoreCase)
+                If idx < 0 Then Return False
+                Dim afterPos As Integer = idx + searchToken.Length
+                ' 文字列末尾なら完全一致
+                If afterPos >= bodyHtml.Length Then Return True
+                ' cid:xxx の直後が英数字・ハイフン・アンダースコア以外なら完全一致
+                Dim nextChar As Char = bodyHtml(afterPos)
+                If Not Char.IsLetterOrDigit(nextChar) AndAlso nextChar <> "-"c AndAlso nextChar <> "_"c Then
+                    Return True
+                End If
+                ' 部分一致だったので次の出現位置を探す
+                startPos = afterPos
+            Loop
+        End Function
+
+        ''' <summary>ファイル名が画像拡張子かどうかを返す。</summary>
+        Private Shared Function IsImageExtension(fileName As String) As Boolean
+            If String.IsNullOrEmpty(fileName) Then Return False
+            Dim ext As String = IO.Path.GetExtension(fileName).ToLower()
+            Select Case ext
+                Case ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".tif", ".svg", ".webp", ".ico"
+                    Return True
+                Case Else
+                    Return False
+            End Select
         End Function
 
         ' ════════════════════════════════════════════════════════════
