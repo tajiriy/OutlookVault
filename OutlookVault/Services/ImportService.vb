@@ -135,45 +135,94 @@ Namespace Services
             End If
 
             Try
-            ' ── 差分スキャン: Restrict フィルタで対象を絞る ──────────────
-            Dim items As Outlook.Items = Nothing
-            BuildItemsCollection(folder, folderName, useDiffScan, items)
+                ' ── 差分スキャン: Restrict フィルタで対象を絞る ──────────────
+                Dim items As Outlook.Items = Nothing
+                BuildItemsCollection(folder, folderName, useDiffScan, items)
 
-            ' R-041: BuildItemsCollection が例外等で items を設定できなかった場合の防衛チェック
-            If items Is Nothing Then
-                Logger.Error(String.Format("フォルダ '{0}' のアイテムコレクション取得に失敗しました", folderName))
-                result.Errors.Add(New ImportErrorEntry(folderName, "", "", "アイテムコレクションの取得に失敗しました"))
-                result.ErrorCount += 1
+                ' R-041: BuildItemsCollection が例外等で items を設定できなかった場合の防衛チェック
+                If items Is Nothing Then
+                    Logger.Error(String.Format("フォルダ '{0}' のアイテムコレクション取得に失敗しました", folderName))
+                    result.Errors.Add(New ImportErrorEntry(folderName, "", "", "アイテムコレクションの取得に失敗しました"))
+                    result.ErrorCount += 1
+                    Return result
+                End If
+
+                Dim totalCount As Integer = items.Count
+                Logger.Info(String.Format("フォルダ '{0}' の取り込みを開始します（{1}件）", folderName, totalCount))
+                result.TotalOutlookCount += totalCount
+                Dim attachBaseDir As String = _settings.AttachmentDirectory
+
+                ' 添付ファイル保存先ディレクトリを作成
+                If Not IO.Directory.Exists(attachBaseDir) Then
+                    IO.Directory.CreateDirectory(attachBaseDir)
+                End If
+
+                ' ── スレッド判定インメモリキャッシュをロード ─────────────
+                Dim messageIdMap As Dictionary(Of String, String) = Nothing
+                Dim subjectMap As Dictionary(Of String, String) = Nothing
+                _repo.GetThreadIdCaches(messageIdMap, subjectMap)
+                _threadingSvc.LoadCaches(messageIdMap, subjectMap)
+
+                ' ── 高速インポート: synchronous OFF ──
+                Dim perfConn As System.Data.SQLite.SQLiteConnection = _dbManager.GetConnection()
+                Try
+                    _dbManager.SetSynchronousMode(perfConn, Data.SynchronousMode.Off)
+                Catch ex As Exception
+                    Logger.Warn("PRAGMA synchronous=OFF の設定に失敗しました: " & ex.Message)
+                    perfConn.Dispose()
+                    Throw
+                End Try
+
+                ' ── メインループ実行 ──
+                Try
+                    Dim importedIds As List(Of Integer) = RunImportLoop(
+                        items, totalCount, folderName, attachBaseDir, maxCount,
+                        existingIds, deletedIds, errorIds, result, progress, cancellationToken)
+
+                    ' 自動削除ルールを適用
+                    If _autoDeleteSvc IsNot Nothing AndAlso importedIds.Count > 0 Then
+                        Try
+                            Dim autoDeleted As Integer = _autoDeleteSvc.ApplyRulesToNewEmails(importedIds)
+                            result.AutoDeletedCount += autoDeleted
+                        Catch ex As Exception
+                            Logger.Warn("自動削除ルールの適用に失敗しました: " & ex.Message)
+                        End Try
+                    End If
+
+                    UpdateSyncState(folderName, useDiffScan, result.ImportedCount >= maxCount)
+                    LogImportResult(folderName, result)
+                Finally
+                    _threadingSvc.ClearCaches()
+                    If items IsNot Nothing Then Runtime.InteropServices.Marshal.ReleaseComObject(items)
+                    Try
+                        _dbManager.SetSynchronousMode(perfConn, Data.SynchronousMode.Normal)
+                    Finally
+                        perfConn.Dispose()
+                    End Try
+                End Try
+
                 Return result
-            End If
-
-            Dim totalCount As Integer = items.Count
-            Logger.Info(String.Format("フォルダ '{0}' の取り込みを開始します（{1}件）", folderName, totalCount))
-            result.TotalOutlookCount += totalCount
-            Dim attachBaseDir As String = _settings.AttachmentDirectory
-
-            ' 添付ファイル保存先ディレクトリを作成
-            If Not IO.Directory.Exists(attachBaseDir) Then
-                IO.Directory.CreateDirectory(attachBaseDir)
-            End If
-
-            ' ── スレッド判定インメモリキャッシュをロード ─────────────
-            Dim messageIdMap As Dictionary(Of String, String) = Nothing
-            Dim subjectMap As Dictionary(Of String, String) = Nothing
-            _repo.GetThreadIdCaches(messageIdMap, subjectMap)
-            _threadingSvc.LoadCaches(messageIdMap, subjectMap)
-
-            ' ── 高速インポート: synchronous OFF ──
-            Dim perfConn As System.Data.SQLite.SQLiteConnection = _dbManager.GetConnection()
-            Try
-                _dbManager.SetSynchronousMode(perfConn, Data.SynchronousMode.Off)
-            Catch ex As Exception
-                Logger.Warn("PRAGMA synchronous=OFF の設定に失敗しました: " & ex.Message)
-                perfConn.Dispose()
-                Throw
+            Finally
+                Runtime.InteropServices.Marshal.ReleaseComObject(folder)
             End Try
+        End Function
 
-            ' ── DB バルク書き込みモード開始 ───────────────────────────
+        ' ── ImportFolder サブメソッド ──────────────────────────────
+
+        ''' <summary>
+        ''' メインの取り込みループを実行する。バルクモードの開始・コミット・ロールバックを管理する。
+        ''' </summary>
+        Private Function RunImportLoop(items As Outlook.Items,
+                                       totalCount As Integer,
+                                       folderName As String,
+                                       attachBaseDir As String,
+                                       maxCount As Integer,
+                                       existingIds As HashSet(Of String),
+                                       deletedIds As HashSet(Of String),
+                                       errorIds As HashSet(Of String),
+                                       result As ImportResult,
+                                       progress As IProgress(Of ImportProgress),
+                                       cancellationToken As CancellationToken) As List(Of Integer)
             _repo.BeginBulk()
             Dim sinceLastCommit As Integer = 0
             Dim importedIds As New List(Of Integer)()
@@ -245,20 +294,6 @@ Namespace Services
 
                 ' 残分をコミット
                 _repo.CommitBulk()
-
-                ' 自動削除ルールを適用
-                If _autoDeleteSvc IsNot Nothing AndAlso importedIds.Count > 0 Then
-                    Try
-                        Dim autoDeleted As Integer = _autoDeleteSvc.ApplyRulesToNewEmails(importedIds)
-                        result.AutoDeletedCount += autoDeleted
-                    Catch ex As Exception
-                        Logger.Warn("自動削除ルールの適用に失敗しました: " & ex.Message)
-                    End Try
-                End If
-
-                UpdateSyncState(folderName, useDiffScan, result.ImportedCount >= maxCount)
-                LogImportResult(folderName, result)
-
             Catch ex As OperationCanceledException
                 _repo.RollbackBulk()
                 Logger.Info(String.Format("フォルダ '{0}' の取り込みが中断されました", folderName))
@@ -267,26 +302,10 @@ Namespace Services
                 _repo.RollbackBulk()
                 Logger.Error(String.Format("フォルダ '{0}' の取り込み中にエラーが発生しました", folderName), ex)
                 Throw
-            Finally
-                _threadingSvc.ClearCaches()
-                ' ── COM オブジェクト解放 ──
-                If items IsNot Nothing Then Runtime.InteropServices.Marshal.ReleaseComObject(items)
-                ' ── 高速インポート後処理: synchronous 復元 ──
-                Try
-                    _dbManager.SetSynchronousMode(perfConn, Data.SynchronousMode.Normal)
-                Finally
-                    perfConn.Dispose()
-                End Try
             End Try
 
-            Return result
-
-            Finally
-                Runtime.InteropServices.Marshal.ReleaseComObject(folder)
-            End Try
+            Return importedIds
         End Function
-
-        ' ── ImportFolder サブメソッド ──────────────────────────────
 
         ''' <summary>差分スキャンまたはフルスキャンに応じた Items コレクションを構築する。</summary>
         Private Sub BuildItemsCollection(folder As Outlook.MAPIFolder, folderName As String,
