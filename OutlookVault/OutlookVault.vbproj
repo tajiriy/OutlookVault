@@ -101,6 +101,7 @@
     <Compile Include="Services\QuoteStripperService.vb" />
     <Compile Include="Services\HtmlSanitizerService.vb" />
     <Compile Include="Services\ThreadingService.vb" />
+    <Compile Include="Icons\ShellIconHelper.vb" />
     <Compile Include="Controls\ConversationViewControl.vb">
       <SubType>UserControl</SubType>
     </Compile>

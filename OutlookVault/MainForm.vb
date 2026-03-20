@@ -106,6 +106,7 @@ Public Class MainForm
         SetupEmailListColumns()
         SetupToggleViewButton()
         UpdateContextMenuForView()
+        SetupFolderTreeIcons()
         LoadFolderTree()
         Await UpdateStatusBarAsync()
 
@@ -187,6 +188,12 @@ Public Class MainForm
     '  フォルダツリー
     ' ════════════════════════════════════════════════════════════
 
+    ''' <summary>フォルダツリーにシェルアイコンを設定する。</summary>
+    Private Sub SetupFolderTreeIcons()
+        Dim imgList As ImageList = Icons.ShellIconHelper.CreateFolderImageList()
+        treeViewFolders.ImageList = imgList
+    End Sub
+
     Private Sub LoadFolderTree()
         treeViewFolders.BeginUpdate()
         treeViewFolders.Nodes.Clear()
@@ -197,11 +204,15 @@ Public Class MainForm
 
         Dim nodeAll As New TreeNode(String.Format("すべて ({0:N0})", totalCount))
         nodeAll.Tag = Nothing
+        nodeAll.ImageIndex = Icons.ShellIconHelper.IndexAll
+        nodeAll.SelectedImageIndex = Icons.ShellIconHelper.IndexAll
         treeViewFolders.Nodes.Add(nodeAll)
 
         For Each kvp As KeyValuePair(Of String, Integer) In folderCounts
             Dim node As New TreeNode(String.Format("{0} ({1:N0})", kvp.Key, kvp.Value))
             node.Tag = kvp.Key
+            node.ImageIndex = Icons.ShellIconHelper.IndexFolder
+            node.SelectedImageIndex = Icons.ShellIconHelper.IndexFolderOpen
             treeViewFolders.Nodes.Add(node)
         Next
 
@@ -209,6 +220,8 @@ Public Class MainForm
         Dim trashCount As Integer = _repo.GetTrashCount()
         Dim nodeTrash As New TreeNode(String.Format("ゴミ箱 ({0:N0})", trashCount))
         nodeTrash.Tag = TrashFolderTag
+        nodeTrash.ImageIndex = Icons.ShellIconHelper.IndexTrash
+        nodeTrash.SelectedImageIndex = Icons.ShellIconHelper.IndexTrash
         treeViewFolders.Nodes.Add(nodeTrash)
 
         treeViewFolders.EndUpdate()
@@ -1143,6 +1156,16 @@ Public Class MainForm
             End If
             Dim node As New TreeNode(displayName)
             node.Tag = item.Item1
+            If item.Item1 Is Nothing Then
+                node.ImageIndex = Icons.ShellIconHelper.IndexAll
+                node.SelectedImageIndex = Icons.ShellIconHelper.IndexAll
+            ElseIf String.Equals(item.Item1, TrashFolderTag, StringComparison.Ordinal) Then
+                node.ImageIndex = Icons.ShellIconHelper.IndexTrash
+                node.SelectedImageIndex = Icons.ShellIconHelper.IndexTrash
+            Else
+                node.ImageIndex = Icons.ShellIconHelper.IndexFolder
+                node.SelectedImageIndex = Icons.ShellIconHelper.IndexFolderOpen
+            End If
             treeViewFolders.Nodes.Add(node)
         Next
 
