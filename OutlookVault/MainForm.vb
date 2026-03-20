@@ -921,7 +921,8 @@ Public Class MainForm
             If IO.File.Exists(filePath) Then
                 Try
                     IO.File.Delete(filePath)
-                Catch
+                Catch ex As Exception
+                    Services.Logger.Warn(String.Format("添付ファイルの削除に失敗しました: {0} — {1}", filePath, ex.Message))
                 End Try
             End If
         Next
@@ -963,7 +964,8 @@ Public Class MainForm
             If IO.File.Exists(filePath) Then
                 Try
                     IO.File.Delete(filePath)
-                Catch
+                Catch ex As Exception
+                    Services.Logger.Warn(String.Format("添付ファイルの削除に失敗しました: {0} — {1}", filePath, ex.Message))
                 End Try
             End If
         Next

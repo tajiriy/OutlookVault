@@ -66,8 +66,9 @@ Namespace Services
                     Using sw As New StreamWriter(logPath, True, Encoding.UTF8)
                         sw.WriteLine(line)
                     End Using
-                Catch
-                    ' ログ出力自体の失敗はアプリを止めない
+                Catch ex As Exception
+                    ' ログ出力自体の失敗はアプリを止めない。デバッグ時の手がかりとして出力ウィンドウに記録する。
+                    System.Diagnostics.Debug.WriteLine("Logger write failed: " & ex.Message)
                 End Try
             End SyncLock
         End Sub
