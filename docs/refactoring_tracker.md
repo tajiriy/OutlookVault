@@ -2,14 +2,15 @@
 
 ## サマリ
 
-| ステータス | 件数 |
-|-----------|------|
-| open      | 0    |
-| in-progress | 0  |
-| done      | 43   |
-| wontfix   | 4    |
-| deferred  | 2    |
-| invalid   | 1    |
+| ステータス | Critical | High | Medium | Low | 計 |
+|-----------|----------|------|--------|-----|-----|
+| open | - | 3 | 4 | 4 | 11 |
+| in-progress | - | - | - | - | 0 |
+| done | 1 | 9 | 23 | 10 | 43 |
+| wontfix | - | - | 3 | 1 | 4 |
+| deferred | - | - | 1 | 1 | 2 |
+| invalid | - | - | 1 | - | 1 |
+| **計** | **1** | **12** | **32** | **16** | **61** |
 
 ## カテゴリ
 
@@ -23,6 +24,7 @@
 | error-handling | 例外処理・COMException ハンドリング |
 | test-coverage | テストケースの追加・エッジケース |
 | readability | コメント・命名・責務分離 |
+| security | XSS 対策・入力検証・サニタイズ |
 
 ## 項目一覧
 
@@ -1024,6 +1026,215 @@
 
 ---
 
+### R-051: ImportFolder の3段ネスト Try...Finally 構造が複雑
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | High |
+| カテゴリ | readability |
+| ソース | review |
+| 対象ファイル | OutlookVault/Services/ImportService.vb |
+| 登録日 | 2026-03-20 |
+
+**内容:** `ImportFolder`（行129〜286）が3段階にネストした `Try...Finally`（137、168、181行目）で構成されている。VB.NET では早期 `Return` でも `Finally` は実行されるため現時点でリークはないが、構造が視覚的に整合しておらず将来の変更でバグ混入リスクが高い。R-041（items Nothing 到達経路）は対応済みだが、全体構造の複雑さは残っている。
+
+**対策:** `perfConn` の取得と解放を `Using` に整理し、メインループ部分を別メソッド（`RunImportLoop`）に抽出してネスト深度を下げる。`folder` の `Finally` を最外 `Try` に一本化する。
+
+**メモ:** R-010（責務過多）で4サブメソッドに分割済みだが、ネスト深度は未解消。
+
+---
+
+### R-052: SummarizeErrors の Dictionary キーに Nothing が渡るリスク
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | High |
+| カテゴリ | error-handling |
+| ソース | review |
+| 対象ファイル | OutlookVault/Services/ImportLogWriter.vb |
+| 登録日 | 2026-03-20 |
+
+**内容:** `SummarizeErrors`（行55〜67）で `entry.ErrorMessage` を Dictionary キーに使用している。`ImportErrorEntry.ErrorMessage` が `Nothing` の場合、`counts.ContainsKey(Nothing)` で `ArgumentNullException` が発生する。通常は `ex.Message` が渡されるため `Nothing` にならないが、防御がない。
+
+**対策:** キー取得時に `If(String.IsNullOrEmpty(entry.ErrorMessage), "(不明)", entry.ErrorMessage)` でフォールバックする。また `ImportErrorEntry` コンストラクタ側でも `Nothing` チェックを追加する。
+
+**メモ:** なし
+
+---
+
+### R-053: PurgeExpiredTrash で DB 接続を2回開く
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | Medium |
+| カテゴリ | performance |
+| ソース | review |
+| 対象ファイル | OutlookVault/Data/EmailRepository.vb |
+| 登録日 | 2026-03-20 |
+
+**内容:** `PurgeExpiredTrash`（行740〜765）が期限切れ ID 取得で1つ目の接続を開閉した後、`PurgeEmailsByIds` で2つ目の接続を開く。0件でも接続のオープン・クローズが発生する無駄がある。
+
+**対策:** ID 取得後に0件チェックを先に行い、不要な接続を回避する。理想的には単一接続内で処理を完結させるが、`PurgeEmailsByIds` が他からも呼ばれるため、0件ガード追加が最小変更。
+
+**メモ:** なし
+
+---
+
+### R-054: AutoDeleteService の全件取得によるメモリ上フィルタリング
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | Medium |
+| カテゴリ | performance |
+| ソース | review |
+| 対象ファイル | OutlookVault/Services/AutoDeleteService.vb |
+| 登録日 | 2026-03-20 |
+
+**内容:** `GetMatchingEmailIds`（行101〜123）が `SearchEmailsFiltered` で全 DB を検索し、結果を `scopeIds`（今回取り込んだ ID リスト）でメモリ上フィルタリングしている。メール件数が増加すると取り込み完了後の自動削除処理が遅くなる。
+
+**対策:** `EmailRepository.SearchEmailsFiltered` に `scopeIds` オプションを追加し、SQL 内で `AND id IN (...)` を生成して DB 側でフィルタリングする。
+
+**メモ:** 件数が少ないうちは現状でも動作するため、低優先度リファクタリング候補。
+
+---
+
+### R-055: AppSettings.SaveSetting 内で MessageBox.Show を直接呼出し
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | Medium |
+| カテゴリ | winforms |
+| ソース | review |
+| 対象ファイル | OutlookVault/Config/AppSettings.vb |
+| 登録日 | 2026-03-20 |
+
+**内容:** `SaveSetting`（行473〜505）内で `System.Windows.Forms.MessageBox.Show` を呼んでおり、サービス層（Config 名前空間）が UI 層に直接依存している。テスト環境で呼ばれると MessageBox がブロッキングする。
+
+**対策:** `Public Event ConfigSaveError As Action(Of String)` を公開し、MainForm / SettingsForm 側でイベント購読して MessageBox を表示する形に分離する。
+
+**メモ:** なし
+
+---
+
+### R-056: MainForm のファイル削除時に空 Catch ブロック
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | Medium |
+| カテゴリ | error-handling |
+| ソース | review |
+| 対象ファイル | OutlookVault/MainForm.vb |
+| 登録日 | 2026-03-20 |
+
+**内容:** `PurgeSelectedEmails`（行920〜931付近）と `EmptyTrash`（行964付近）内でファイル削除時に空の `Catch` ブロックを使用している。ファイル削除失敗の理由が記録されずデバッグ困難。
+
+**対策:** `Catch ex As Exception` で `Logger.Warn` に削除失敗のパスとメッセージを記録する。
+
+**メモ:** R-008/R-009 は OutlookService/MainForm 非同期処理の空 Catch を対応済みだが、ファイル削除箇所は未対応。
+
+---
+
+### R-057: Logger.WriteLog の Catch が空でログ消失を検知不能
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | Low |
+| カテゴリ | error-handling |
+| ソース | review |
+| 対象ファイル | OutlookVault/Services/Logger.vb |
+| 登録日 | 2026-03-20 |
+
+**内容:** `WriteLog`（行68〜70）の `Catch` ブロックが空で、ログ書き込み失敗がすべて無視される。ディスク容量不足や権限不足でログが消失しても気づけない。
+
+**対策:** `Catch` ブロックで `System.Diagnostics.Debug.WriteLine("Logger write failed: " & ex.Message)` にフォールバックし、デバッグ時に最低限の手がかりを残す。
+
+**メモ:** なし
+
+---
+
+### R-058: DatabaseManager の PRAGMA index_info でインデックス名を文字列連結
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | Low |
+| カテゴリ | sql-safety |
+| ソース | review |
+| 対象ファイル | OutlookVault/Data/DatabaseManager.vb |
+| 登録日 | 2026-03-20 |
+
+**内容:** `HasUniqueConstraintOnMessageIdOnly`（行182〜197）で `PRAGMA index_info({indexName})` のインデックス名を `String.Format` で SQL に埋め込んでいる。SQLite の PRAGMA はパラメータ化できないため、インデックス名に特殊文字が含まれる場合に問題となりうる。
+
+**対策:** インデックス名を正規表現 `^[a-zA-Z0-9_]+$` でホワイトリスト検証するか、ダブルクォートで囲んでエスケープする。
+
+**メモ:** 通常は SQLite 内部生成のインデックス名のため実害リスクは低い。
+
+---
+
+### R-059: OutlookService.GetSenderEmail の Lambda 経由 COM オブジェクト生成パターン
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | Low |
+| カテゴリ | resource-management |
+| ソース | review |
+| 対象ファイル | OutlookVault/Services/OutlookService.vb |
+| 登録日 | 2026-03-20 |
+
+**内容:** `GetSenderEmail`（行612〜617）で `Function() mailItem.Sender` を Lambda として `ResolveExchangeAddress` に渡している。Lambda が呼ばれるたびに新しい COM オブジェクトが生成される。`ResolveExchangeAddress` 内（634〜646行目）で解放されているが、Lambda 経由の COM 生成パターンは保守時にリーク誘発のリスクがある。
+
+**対策:** Lambda の意図（呼び出しごとに新しい COM オブジェクトを取得し、呼び出し先で解放する）をコメントで明示する。
+
+**メモ:** 現時点でリークはないが、パターンの意図が読みにくい。
+
+---
+
+### R-060: IOutlookService インターフェース導入によるテスタビリティ向上
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | High |
+| カテゴリ | test-coverage |
+| ソース | review |
+| 対象ファイル | OutlookVault/Services/OutlookService.vb, OutlookVault/Services/ImportService.vb |
+| 登録日 | 2026-03-20 |
+
+**内容:** `ImportServiceTests` は `IsSentFolder` の静的メソッドのみのテスト。`ImportFolder` や `ProcessMailItem` などのコアロジックはテストされていない。`ImportService` が `OutlookService` を直接フィールドとして持つ構造（インターフェースなし）のため、モック化ができない。R-015/R-029 は wontfix だが、インターフェース導入によりモックベースのテストが可能になる。
+
+**対策:** `IOutlookService` インターフェースを定義し、`ImportService` のコンストラクタで受け取る。テスト用スタブを `OutlookVault.Tests` に追加して `ProcessMailItem` の重複判定・スレッド付与ロジックをカバーする。
+
+**メモ:** R-015（wontfix）の再検討。インターフェース導入で段階的にテスト可能範囲を広げるアプローチ。
+
+---
+
+### R-061: HtmlSanitizerService のイベントハンドラ除去正規表現にギャップ
+
+| 項目 | 値 |
+|------|-----|
+| ステータス | open |
+| 優先度 | Low |
+| カテゴリ | security |
+| ソース | review |
+| 対象ファイル | OutlookVault/Services/HtmlSanitizerService.vb |
+| 登録日 | 2026-03-20 |
+
+**内容:** `EventHandlerPattern`（行28〜29）の正規表現 `\s+on\w+\s*=\s*...` は先頭に `\s+` を必要とするため、`<a onclick=...>` のようにタグ名直後にスペースなしでイベントハンドラが記述されているケースや、`<div\nonclick=...>` のような改行区切りのケースを見逃す可能性がある。
+
+**対策:** `\s+` を `[\s\x00-\x1F]+` に拡張し、制御文字区切りも対象にする。Outlook メール表示用途のため実害は限定的だが、XSS 対策のベストプラクティスとして対処する。
+
+**メモ:** なし
+
+---
+
 ## 変更履歴
 
 | 日付 | 項目 | 変更内容 |
@@ -1064,3 +1275,4 @@
 | 2026-03-19 | R-040 | done: DeleteEmailsByIds の添付パス収集を IN 句一括 SELECT に変更（999件バッチ分割） |
 | 2026-03-19 | R-041〜R-050 | 4回目の code-reviewer レビューから 10 件を一括登録 |
 | 2026-03-19 | R-041〜R-050 | done: 5並列 refactor-worker で全10件を一括対応 |
+| 2026-03-20 | R-051〜R-061 | 5回目の code-reviewer レビューから 11 件を一括登録 |
