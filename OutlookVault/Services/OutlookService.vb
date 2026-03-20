@@ -500,8 +500,13 @@ Namespace Services
 
                         Try
                             ' 保存先ディレクトリを初回ファイル保存直前に作成（空フォルダを残さない）
+                            ' 再取り込み時は既存ファイルを削除してから保存（孤児ファイル防止）
                             If Not dirCreated Then
-                                If Not Directory.Exists(saveDir) Then
+                                If Directory.Exists(saveDir) Then
+                                    For Each existingFile As String In Directory.GetFiles(saveDir)
+                                        File.Delete(existingFile)
+                                    Next
+                                Else
                                     Directory.CreateDirectory(saveDir)
                                 End If
                                 dirCreated = True

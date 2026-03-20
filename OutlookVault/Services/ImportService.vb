@@ -406,20 +406,22 @@ Namespace Services
             ' Exchange アドレスキャッシュを DB からロード
             _outlookSvc.LoadExchangeCache(_repo.LoadExchangeAddressCache())
 
-            For Each name As String In folderNames
-                cancellationToken.ThrowIfCancellationRequested()
-                Dim r As ImportResult = ImportFolder(name, maxCountPerFolder, existingIds, deletedIds, errorIds, progress, cancellationToken, useDiffScan)
-                total.ImportedCount += r.ImportedCount
-                total.SkippedCount += r.SkippedCount
-                total.ErrorCount += r.ErrorCount
-                total.ErrorSkipCount += r.ErrorSkipCount
-                total.TotalOutlookCount += r.TotalOutlookCount
-                total.AutoDeletedCount += r.AutoDeletedCount
-                total.Errors.AddRange(r.Errors)
-            Next
-
-            ' Exchange アドレスキャッシュの新規分を DB に書き戻し
-            _repo.SaveExchangeAddressCache(_outlookSvc.GetExchangeCache())
+            Try
+                For Each name As String In folderNames
+                    cancellationToken.ThrowIfCancellationRequested()
+                    Dim r As ImportResult = ImportFolder(name, maxCountPerFolder, existingIds, deletedIds, errorIds, progress, cancellationToken, useDiffScan)
+                    total.ImportedCount += r.ImportedCount
+                    total.SkippedCount += r.SkippedCount
+                    total.ErrorCount += r.ErrorCount
+                    total.ErrorSkipCount += r.ErrorSkipCount
+                    total.TotalOutlookCount += r.TotalOutlookCount
+                    total.AutoDeletedCount += r.AutoDeletedCount
+                    total.Errors.AddRange(r.Errors)
+                Next
+            Finally
+                ' Exchange アドレスキャッシュの新規分を DB に書き戻し（キャンセル時も保存する）
+                _repo.SaveExchangeAddressCache(_outlookSvc.GetExchangeCache())
+            End Try
 
             Return total
         End Function
