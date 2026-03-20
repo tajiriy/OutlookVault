@@ -59,6 +59,7 @@ Write-Host "=== ファイルコピー ==="
 $files = @(
     "OutlookVault.exe"
     "OutlookVault.exe.config"
+    "app.ico"
     "EntityFramework.dll"
     "EntityFramework.SqlServer.dll"
     "Microsoft.Office.Interop.Outlook.dll"
