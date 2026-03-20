@@ -4,15 +4,15 @@
 
 | ステータス | Critical | High | Medium | Low | 計 |
 |-----------|----------|------|--------|-----|-----|
-| open | - | 1 | 1 | 3 | 5 |
+| open | - | 1 | 0 | 3 | 4 |
 | in-progress | - | - | - | - | 0 |
-| done | 1 | 11 | 25 | 11 | 48 |
+| done | 1 | 11 | 26 | 11 | 49 |
 | wontfix | - | - | 4 | 1 | 5 |
 | deferred | - | - | 1 | 1 | 2 |
 | invalid | - | - | 1 | - | 1 |
 | **計** | **1** | **12** | **32** | **16** | **61** |
 
-<!-- open:5 done:48 wontfix:5 deferred:2 invalid:1 = 61 -->
+<!-- open:4 done:49 wontfix:5 deferred:2 invalid:1 = 61 -->
 
 ## カテゴリ
 
@@ -1111,16 +1111,17 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | Medium |
 | カテゴリ | winforms |
 | ソース | review |
 | 対象ファイル | OutlookVault/Config/AppSettings.vb |
 | 登録日 | 2026-03-20 |
+| 修正日 | 2026-03-20 |
 
 **内容:** `SaveSetting`（行473〜505）内で `System.Windows.Forms.MessageBox.Show` を呼んでおり、サービス層（Config 名前空間）が UI 層に直接依存している。テスト環境で呼ばれると MessageBox がブロッキングする。
 
-**対策:** `Public Event ConfigSaveError As Action(Of String)` を公開し、MainForm / SettingsForm 側でイベント購読して MessageBox を表示する形に分離する。
+**対策:** `Public Event ConfigSaveError As EventHandler(Of String)` を AppSettings に追加し、`SaveSetting` 内の `MessageBox.Show` を `RaiseEvent ConfigSaveError` に置き換え。MainForm の `InitializeServices` で `AddHandler _settings.ConfigSaveError, AddressOf OnConfigSaveError` を登録し、`OnConfigSaveError` で `MessageBox.Show` を実行。
 
 **メモ:** なし
 
@@ -1288,3 +1289,4 @@
 | 2026-03-20 | R-056, R-057 | done: MainForm ファイル削除と Logger.WriteLog の空 Catch にログ/Debug 出力を追加 |
 | 2026-03-20 | R-053 | wontfix: 既に0件ガードあり、SQLite 接続コスト軽微で変更効果が見合わない |
 | 2026-03-20 | R-054 | done: SearchEmailsFiltered に scopeIds パラメータ追加、DB 側で IN 句フィルタリング |
+| 2026-03-20 | R-055 | done: AppSettings の MessageBox.Show を ConfigSaveError イベントに分離 |
