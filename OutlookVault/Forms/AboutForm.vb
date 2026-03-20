@@ -12,6 +12,8 @@ Namespace Forms
 
         Public Sub New()
             InitializeComponent()
+            Dim appIcon As Drawing.Icon = Services.FileHelper.GetAppIcon()
+            If appIcon IsNot Nothing Then Me.Icon = appIcon
 
             ' アイコン画像を読み込み
             Dim icoPath As String = System.IO.Path.Combine(Application.StartupPath, "app.ico")

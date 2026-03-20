@@ -10,6 +10,12 @@ Namespace Forms
     ''' </summary>
     Public Class EmailViewForm
 
+        Public Sub New()
+            InitializeComponent()
+            Dim appIcon As Drawing.Icon = Services.FileHelper.GetAppIcon()
+            If appIcon IsNot Nothing Then Me.Icon = appIcon
+        End Sub
+
     ''' <summary>指定メールをプレビューに表示する。</summary>
     Public Sub ShowEmail(email As Models.Email, Optional highlightQuery As String = Nothing)
         ' タイトルバーに件名を表示

@@ -19,6 +19,8 @@ Public Class SettingsForm
 
     Public Sub New()
         InitializeComponent()
+        Dim appIcon As Drawing.Icon = Services.FileHelper.GetAppIcon()
+        If appIcon IsNot Nothing Then Me.Icon = appIcon
         _settings = Config.AppSettings.Instance
         LoadSettings()
     End Sub

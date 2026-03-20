@@ -30,6 +30,8 @@ Namespace Forms
             Me.DoubleBuffered = True
             _bindingSource = New BindingSource()
             InitializeComponent()
+            Dim appIcon As Drawing.Icon = Services.FileHelper.GetAppIcon()
+            If appIcon IsNot Nothing Then Me.Icon = appIcon
             cboTable.Items.AddRange(DirectCast(TableNames, Object()))
             dgv.DataSource = _bindingSource
             AddHandler txtFilter.TextChanged, AddressOf TxtFilter_TextChanged

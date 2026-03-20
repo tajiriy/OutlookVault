@@ -11,6 +11,8 @@ Namespace Forms
 
         Public Sub New()
             InitializeComponent()
+            Dim appIcon As Drawing.Icon = Services.FileHelper.GetAppIcon()
+            If appIcon IsNot Nothing Then Me.Icon = appIcon
 
             Dim helpPath As String = Path.Combine(Application.StartupPath, "Help", "user-manual.html")
             If File.Exists(helpPath) Then

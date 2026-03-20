@@ -22,6 +22,19 @@ Namespace Services
             End If
         End Function
 
+        Private Shared _appIcon As Drawing.Icon
+
+        ''' <summary>アプリケーションアイコン (app.ico) を返す。見つからなければ Nothing。</summary>
+        Public Shared Function GetAppIcon() As Drawing.Icon
+            If _appIcon Is Nothing Then
+                Dim icoPath As String = System.IO.Path.Combine(Application.StartupPath, "app.ico")
+                If System.IO.File.Exists(icoPath) Then
+                    _appIcon = New Drawing.Icon(icoPath)
+                End If
+            End If
+            Return _appIcon
+        End Function
+
     End Class
 
 End Namespace

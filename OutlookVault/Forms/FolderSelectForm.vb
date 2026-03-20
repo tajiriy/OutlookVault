@@ -50,6 +50,8 @@ Partial Public Class FolderSelectForm
         _selectedFolders = New HashSet(Of String)(If(currentSelection, New List(Of String)()),
                                                    StringComparer.OrdinalIgnoreCase)
         InitializeComponent()
+        Dim appIcon As Drawing.Icon = Services.FileHelper.GetAppIcon()
+        If appIcon IsNot Nothing Then Me.Icon = appIcon
         PopulateFolderList(String.Empty)
     End Sub
 

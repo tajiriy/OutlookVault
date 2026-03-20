@@ -21,6 +21,8 @@ Namespace Forms
             _dbManager = dbManager
             _bindingSource = New BindingSource()
             InitializeComponent()
+            Dim appIcon As Drawing.Icon = Services.FileHelper.GetAppIcon()
+            If appIcon IsNot Nothing Then Me.Icon = appIcon
             AddHandler dgv.CellFormatting, AddressOf Dgv_CellFormatting
             LoadData()
         End Sub

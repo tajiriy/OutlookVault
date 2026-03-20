@@ -21,6 +21,8 @@ Namespace Forms
             _emailRepo = emailRepo
             _autoDeleteSvc = autoDeleteSvc
             InitializeComponent()
+            Dim appIcon As Drawing.Icon = Services.FileHelper.GetAppIcon()
+            If appIcon IsNot Nothing Then Me.Icon = appIcon
             LoadRules()
         End Sub
 

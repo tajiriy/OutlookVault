@@ -22,6 +22,8 @@ Namespace Forms
             _repo = repo
             _bindingSource = New BindingSource()
             InitializeComponent()
+            Dim appIcon As Drawing.Icon = Services.FileHelper.GetAppIcon()
+            If appIcon IsNot Nothing Then Me.Icon = appIcon
             dgv.DataSource = _bindingSource
             LoadData()
         End Sub

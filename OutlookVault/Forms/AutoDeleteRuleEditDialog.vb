@@ -22,6 +22,8 @@ Namespace Forms
                        Optional filterExpression As String = "")
             _emailRepo = emailRepo
             InitializeComponent()
+            Dim appIcon As Drawing.Icon = Services.FileHelper.GetAppIcon()
+            If appIcon IsNot Nothing Then Me.Icon = appIcon
             txtName.Text = ruleName
             txtFilter.Text = filterExpression
         End Sub
