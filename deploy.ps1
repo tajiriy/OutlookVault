@@ -99,6 +99,16 @@ foreach ($arch in @("x64", "x86")) {
     }
 }
 
+# ユーザーマニュアル (Help フォルダ丸ごとコピー)
+$helpSrcDir = Join-Path $BuildDir "Help"
+if (Test-Path $helpSrcDir) {
+    $helpDestDir = Join-Path $DeployDir "Help"
+    Copy-Item $helpSrcDir -Destination $helpDestDir -Recurse -Force
+    Write-Host "  コピー: Help\ (user-manual.html, style.css, screenshots)"
+} else {
+    Write-Host "  警告: Help フォルダが見つかりません（スキップ）" -ForegroundColor Yellow
+}
+
 # data フォルダの処理
 $dataDir = Join-Path $DeployDir "data"
 Write-Host ""
