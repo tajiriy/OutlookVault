@@ -4,15 +4,15 @@
 
 | ステータス | Critical | High | Medium | Low | 計 |
 |-----------|----------|------|--------|-----|-----|
-| open | - | 1 | 0 | 3 | 4 |
+| open | - | 1 | 0 | 0 | 1 |
 | in-progress | - | - | - | - | 0 |
-| done | 1 | 11 | 26 | 11 | 49 |
+| done | 1 | 11 | 26 | 14 | 52 |
 | wontfix | - | - | 4 | 1 | 5 |
 | deferred | - | - | 1 | 1 | 2 |
 | invalid | - | - | 1 | - | 1 |
 | **計** | **1** | **12** | **32** | **16** | **61** |
 
-<!-- open:4 done:49 wontfix:5 deferred:2 invalid:1 = 61 -->
+<!-- open:1 done:52 wontfix:5 deferred:2 invalid:1 = 61 -->
 
 ## カテゴリ
 
@@ -1171,16 +1171,17 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | Low |
 | カテゴリ | sql-safety |
 | ソース | review |
 | 対象ファイル | OutlookVault/Data/DatabaseManager.vb |
 | 登録日 | 2026-03-20 |
+| 修正日 | 2026-03-20 |
 
 **内容:** `HasUniqueConstraintOnMessageIdOnly`（行182〜197）で `PRAGMA index_info({indexName})` のインデックス名を `String.Format` で SQL に埋め込んでいる。SQLite の PRAGMA はパラメータ化できないため、インデックス名に特殊文字が含まれる場合に問題となりうる。
 
-**対策:** インデックス名を正規表現 `^[a-zA-Z0-9_]+$` でホワイトリスト検証するか、ダブルクォートで囲んでエスケープする。
+**対策:** `Regex.IsMatch(indexName, "^[a-zA-Z0-9_]+$")` でホワイトリスト検証を追加。不正な文字を含むインデックス名は `Continue While` でスキップ。
 
 **メモ:** 通常は SQLite 内部生成のインデックス名のため実害リスクは低い。
 
@@ -1190,18 +1191,19 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | Low |
 | カテゴリ | resource-management |
 | ソース | review |
 | 対象ファイル | OutlookVault/Services/OutlookService.vb |
 | 登録日 | 2026-03-20 |
+| 修正日 | 2026-03-20 |
 
 **内容:** `GetSenderEmail`（行612〜617）で `Function() mailItem.Sender` を Lambda として `ResolveExchangeAddress` に渡している。Lambda が呼ばれるたびに新しい COM オブジェクトが生成される。`ResolveExchangeAddress` 内（634〜646行目）で解放されているが、Lambda 経由の COM 生成パターンは保守時にリーク誘発のリスクがある。
 
-**対策:** Lambda の意図（呼び出しごとに新しい COM オブジェクトを取得し、呼び出し先で解放する）をコメントで明示する。
+**対策:** Lambda の直前にコメントを追加し、呼び出しごとに新しい COM オブジェクトが生成され ResolveExchangeAddress 内で解放される意図を明示。
 
-**メモ:** 現時点でリークはないが、パターンの意図が読みにくい。
+**メモ:** 現時点でリークはないが、パターンの意図が読みにくかった。
 
 ---
 
@@ -1228,16 +1230,17 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | Low |
 | カテゴリ | security |
 | ソース | review |
 | 対象ファイル | OutlookVault/Services/HtmlSanitizerService.vb |
 | 登録日 | 2026-03-20 |
+| 修正日 | 2026-03-20 |
 
 **内容:** `EventHandlerPattern`（行28〜29）の正規表現 `\s+on\w+\s*=\s*...` は先頭に `\s+` を必要とするため、`<a onclick=...>` のようにタグ名直後にスペースなしでイベントハンドラが記述されているケースや、`<div\nonclick=...>` のような改行区切りのケースを見逃す可能性がある。
 
-**対策:** `\s+` を `[\s\x00-\x1F]+` に拡張し、制御文字区切りも対象にする。Outlook メール表示用途のため実害は限定的だが、XSS 対策のベストプラクティスとして対処する。
+**対策:** `\s+` を `[\s/]+` に拡張し、スラッシュ区切り（自己閉じタグ内等）も対象にする。
 
 **メモ:** なし
 
@@ -1290,3 +1293,4 @@
 | 2026-03-20 | R-053 | wontfix: 既に0件ガードあり、SQLite 接続コスト軽微で変更効果が見合わない |
 | 2026-03-20 | R-054 | done: SearchEmailsFiltered に scopeIds パラメータ追加、DB 側で IN 句フィルタリング |
 | 2026-03-20 | R-055 | done: AppSettings の MessageBox.Show を ConfigSaveError イベントに分離 |
+| 2026-03-20 | R-058, R-059, R-061 | done: PRAGMA ホワイトリスト検証、Lambda COM コメント追加、EventHandler 正規表現拡張 |
