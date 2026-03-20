@@ -467,15 +467,41 @@ Namespace Config
             Return defaultValue
         End Function
 
+        ''' <summary>設定保存エラーのメッセージボックスを一度だけ表示するためのフラグ</summary>
+        Private Shared _configErrorShown As Boolean = False
+
         Private Sub SaveSetting(key As String, value As String)
-            Dim config As Configuration = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
-            If config.AppSettings.Settings(key) Is Nothing Then
-                config.AppSettings.Settings.Add(key, value)
-            Else
-                config.AppSettings.Settings(key).Value = value
-            End If
-            config.Save(ConfigurationSaveMode.Modified)
-            ConfigurationManager.RefreshSection("appSettings")
+            Dim maxRetries As Integer = 2
+            For attempt As Integer = 1 To maxRetries
+                Try
+                    Dim config As Configuration = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None)
+                    If config.AppSettings.Settings(key) Is Nothing Then
+                        config.AppSettings.Settings.Add(key, value)
+                    Else
+                        config.AppSettings.Settings(key).Value = value
+                    End If
+                    config.Save(ConfigurationSaveMode.Modified)
+                    ConfigurationManager.RefreshSection("appSettings")
+                    Return
+                Catch ex As ConfigurationErrorsException
+                    ConfigurationManager.RefreshSection("appSettings")
+                    If attempt = maxRetries Then
+                        Services.Logger.Warn("設定の保存に失敗しました（構成ファイルが外部から変更されています）: " &
+                                             key & " = " & value & " — " & ex.Message)
+                        If Not _configErrorShown Then
+                            _configErrorShown = True
+                            System.Windows.Forms.MessageBox.Show(
+                                "設定の保存に失敗しました。" & Environment.NewLine &
+                                "構成ファイルが別のプログラム（アンチウィルスソフト等）によって変更されています。" & Environment.NewLine &
+                                Environment.NewLine &
+                                "設定は次回起動時に反映されない場合があります。",
+                                "設定保存エラー",
+                                System.Windows.Forms.MessageBoxButtons.OK,
+                                System.Windows.Forms.MessageBoxIcon.Warning)
+                        End If
+                    End If
+                End Try
+            Next
         End Sub
 
     End Class
