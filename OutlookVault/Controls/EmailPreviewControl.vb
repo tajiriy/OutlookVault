@@ -31,6 +31,13 @@ Namespace Controls
         ' _attachImageList, _attachLargeImageList, _attachContextMenu, _attachToolTip は Designer.vb で宣言・生成
         Private ReadOnly _htmlSanitizer As New Services.HtmlSanitizerService()
 
+        ' 添付パネル左端ドラッグリサイズ用
+        Private _isResizingAttach As Boolean
+        Private _resizeStartScreenX As Integer
+        Private _resizeStartWidth As Integer
+        Private Const AttachResizeGripWidth As Integer = 5
+        Private Const AttachMinWidth As Integer = 80
+
         ''' <summary>ダブルクリックで開くことをブロックする危険な拡張子。</summary>
         Private Shared ReadOnly BlockedExtensions() As String = {
             ".exe", ".bat", ".cmd", ".com", ".scr", ".pif",
@@ -60,6 +67,12 @@ Namespace Controls
             _attachImageList.ImageSize = New Drawing.Size(16, 16)
             _attachLargeImageList.ColorDepth = ColorDepth.Depth32Bit
             _attachLargeImageList.ImageSize = New Drawing.Size(32, 32)
+
+            ' 添付パネルの左端リサイズ用イベント
+            AddHandler pnlAttachments.MouseDown, AddressOf AttachPanel_ResizeMouseDown
+            AddHandler pnlAttachments.MouseMove, AddressOf AttachPanel_ResizeMouseMove
+            AddHandler pnlAttachments.MouseUp, AddressOf AttachPanel_ResizeMouseUp
+            AddHandler pnlAttachments.Paint, AddressOf AttachPanel_Paint
         End Sub
 
         ' ════════════════════════════════════════════════════════════
@@ -564,6 +577,51 @@ Namespace Controls
             Next
             Return False
         End Function
+
+        ' ════════════════════════════════════════════════════════════
+        '  添付パネル リサイズ
+        ' ════════════════════════════════════════════════════════════
+
+        Private Sub AttachPanel_Paint(sender As Object, e As System.Windows.Forms.PaintEventArgs)
+            ' 左端に 1px の境界線を描画
+            Using pen As New Drawing.Pen(Drawing.SystemColors.ControlDark, 1)
+                e.Graphics.DrawLine(pen, 0, 0, 0, pnlAttachments.Height - 1)
+            End Using
+        End Sub
+
+        Private Sub AttachPanel_ResizeMouseDown(sender As Object, e As System.Windows.Forms.MouseEventArgs)
+            If e.Button = System.Windows.Forms.MouseButtons.Left AndAlso e.X <= AttachResizeGripWidth Then
+                _isResizingAttach = True
+                _resizeStartScreenX = pnlAttachments.PointToScreen(e.Location).X
+                _resizeStartWidth = pnlAttachments.Width
+                pnlAttachments.Capture = True
+            End If
+        End Sub
+
+        Private Sub AttachPanel_ResizeMouseMove(sender As Object, e As System.Windows.Forms.MouseEventArgs)
+            If _isResizingAttach Then
+                Dim currentScreenX As Integer = pnlAttachments.PointToScreen(e.Location).X
+                Dim delta As Integer = _resizeStartScreenX - currentScreenX
+                Dim newWidth As Integer = Math.Max(AttachMinWidth, _resizeStartWidth + delta)
+                ' 本文領域が最低 200px 残るようにする
+                Dim maxWidth As Integer = Me.ClientSize.Width - 200
+                If newWidth > maxWidth Then newWidth = maxWidth
+                pnlAttachments.Width = newWidth
+            Else
+                If e.X <= AttachResizeGripWidth Then
+                    pnlAttachments.Cursor = System.Windows.Forms.Cursors.VSplit
+                Else
+                    pnlAttachments.Cursor = System.Windows.Forms.Cursors.Default
+                End If
+            End If
+        End Sub
+
+        Private Sub AttachPanel_ResizeMouseUp(sender As Object, e As System.Windows.Forms.MouseEventArgs)
+            If _isResizingAttach Then
+                _isResizingAttach = False
+                pnlAttachments.Capture = False
+            End If
+        End Sub
 
         ''' <summary>
         ''' WebBrowser のナビゲーションを制御する。

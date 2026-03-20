@@ -139,6 +139,7 @@ Namespace Controls
             ' ── pnlAttachments (Dock=Right, 120px) ────────────────────
             Me.pnlAttachments.Dock = System.Windows.Forms.DockStyle.Right
             Me.pnlAttachments.Width = 120
+            Me.pnlAttachments.MinimumSize = New System.Drawing.Size(80, 0)
             Me.pnlAttachments.Name = "pnlAttachments"
             Me.pnlAttachments.Padding = New System.Windows.Forms.Padding(4)
             Me.pnlAttachments.Visible = False
