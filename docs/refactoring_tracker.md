@@ -4,15 +4,15 @@
 
 | ステータス | Critical | High | Medium | Low | 計 |
 |-----------|----------|------|--------|-----|-----|
-| open | - | 1 | 3 | 3 | 7 |
+| open | - | 1 | 1 | 3 | 5 |
 | in-progress | - | - | - | - | 0 |
-| done | 1 | 11 | 24 | 11 | 47 |
-| wontfix | - | - | 3 | 1 | 4 |
+| done | 1 | 11 | 25 | 11 | 48 |
+| wontfix | - | - | 4 | 1 | 5 |
 | deferred | - | - | 1 | 1 | 2 |
 | invalid | - | - | 1 | - | 1 |
 | **計** | **1** | **12** | **32** | **16** | **61** |
 
-<!-- open:7 done:47 wontfix:4 deferred:2 invalid:1 = 61 -->
+<!-- open:5 done:48 wontfix:5 deferred:2 invalid:1 = 61 -->
 
 ## カテゴリ
 
@@ -1072,7 +1072,7 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | wontfix |
 | 優先度 | Medium |
 | カテゴリ | performance |
 | ソース | review |
@@ -1083,7 +1083,7 @@
 
 **対策:** ID 取得後に0件チェックを先に行い、不要な接続を回避する。理想的には単一接続内で処理を完結させるが、`PurgeEmailsByIds` が他からも呼ばれるため、0件ガード追加が最小変更。
 
-**メモ:** なし
+**メモ:** wontfix: 現在のコードは既に `expiredIds.Count > 0` ガードがあり、0件の場合は2回目の接続は発生しない。1回目の接続は ID 取得に不可避。接続共有は `PurgeEmailsByIds` の他の呼び出し元への影響が大きく、SQLite の接続コストも軽微なため、変更の効果が見合わない。
 
 ---
 
@@ -1091,18 +1091,19 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | Medium |
 | カテゴリ | performance |
 | ソース | review |
 | 対象ファイル | OutlookVault/Services/AutoDeleteService.vb |
 | 登録日 | 2026-03-20 |
+| 修正日 | 2026-03-20 |
 
 **内容:** `GetMatchingEmailIds`（行101〜123）が `SearchEmailsFiltered` で全 DB を検索し、結果を `scopeIds`（今回取り込んだ ID リスト）でメモリ上フィルタリングしている。メール件数が増加すると取り込み完了後の自動削除処理が遅くなる。
 
-**対策:** `EmailRepository.SearchEmailsFiltered` に `scopeIds` オプションを追加し、SQL 内で `AND id IN (...)` を生成して DB 側でフィルタリングする。
+**対策:** `EmailRepository.SearchEmailsFiltered` に `Optional scopeIds As List(Of Integer)` パラメータを追加し、SQL の `WHERE` に `AND e.id IN (@scope0, @scope1, ...)` を付加して DB 側でフィルタリング。`AutoDeleteService.GetMatchingEmailIds` のメモリフィルタを廃止し、`SearchEmailsFiltered` に `scopeIds` を渡すよう変更。
 
-**メモ:** 件数が少ないうちは現状でも動作するため、低優先度リファクタリング候補。
+**メモ:** なし
 
 ---
 
@@ -1285,3 +1286,5 @@
 | 2026-03-20 | R-052 | done: SummarizeErrors の Nothing 防御とコンストラクタガード追加、テスト2件追加 |
 | 2026-03-20 | R-051 | done: ImportFolder のバルクループを RunImportLoop に抽出、ネスト3段→2段に削減 |
 | 2026-03-20 | R-056, R-057 | done: MainForm ファイル削除と Logger.WriteLog の空 Catch にログ/Debug 出力を追加 |
+| 2026-03-20 | R-053 | wontfix: 既に0件ガードあり、SQLite 接続コスト軽微で変更効果が見合わない |
+| 2026-03-20 | R-054 | done: SearchEmailsFiltered に scopeIds パラメータ追加、DB 側で IN 句フィルタリング |
