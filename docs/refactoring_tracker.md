@@ -4,13 +4,15 @@
 
 | ステータス | Critical | High | Medium | Low | 計 |
 |-----------|----------|------|--------|-----|-----|
-| open | - | 3 | 4 | 4 | 11 |
+| open | - | 2 | 4 | 4 | 10 |
 | in-progress | - | - | - | - | 0 |
-| done | 1 | 9 | 23 | 10 | 43 |
+| done | 1 | 10 | 23 | 10 | 44 |
 | wontfix | - | - | 3 | 1 | 4 |
 | deferred | - | - | 1 | 1 | 2 |
 | invalid | - | - | 1 | - | 1 |
 | **計** | **1** | **12** | **32** | **16** | **61** |
+
+<!-- open:10 done:44 wontfix:4 deferred:2 invalid:1 = 61 -->
 
 ## カテゴリ
 
@@ -1049,16 +1051,17 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | High |
 | カテゴリ | error-handling |
 | ソース | review |
 | 対象ファイル | OutlookVault/Services/ImportLogWriter.vb |
 | 登録日 | 2026-03-20 |
+| 修正日 | 2026-03-20 |
 
 **内容:** `SummarizeErrors`（行55〜67）で `entry.ErrorMessage` を Dictionary キーに使用している。`ImportErrorEntry.ErrorMessage` が `Nothing` の場合、`counts.ContainsKey(Nothing)` で `ArgumentNullException` が発生する。通常は `ex.Message` が渡されるため `Nothing` にならないが、防御がない。
 
-**対策:** キー取得時に `If(String.IsNullOrEmpty(entry.ErrorMessage), "(不明)", entry.ErrorMessage)` でフォールバックする。また `ImportErrorEntry` コンストラクタ側でも `Nothing` チェックを追加する。
+**対策:** キー取得時に `If(String.IsNullOrEmpty(entry.ErrorMessage), "(不明)", entry.ErrorMessage)` でフォールバックする。また `ImportErrorEntry` コンストラクタ側でも `Nothing` チェックを追加する。実施: (1) `ImportErrorEntry` コンストラクタで `If(errorMessage, "")` に変更、(2) `SummarizeErrors` で `IsNullOrEmpty` チェックを追加、(3) テスト2件追加（Nothing/空文字が "(不明)" にグループ化されることを検証）。
 
 **メモ:** なし
 
@@ -1276,3 +1279,4 @@
 | 2026-03-19 | R-041〜R-050 | 4回目の code-reviewer レビューから 10 件を一括登録 |
 | 2026-03-19 | R-041〜R-050 | done: 5並列 refactor-worker で全10件を一括対応 |
 | 2026-03-20 | R-051〜R-061 | 5回目の code-reviewer レビューから 11 件を一括登録 |
+| 2026-03-20 | R-052 | done: SummarizeErrors の Nothing 防御とコンストラクタガード追加、テスト2件追加 |
