@@ -64,6 +64,34 @@ Public Class ImportLogWriterTests
         Assert.AreEqual(2, summary(0).Value)
     End Sub
 
+    <Test>
+    Public Sub SummarizeErrors_NothingErrorMessage_GroupedAsUnknown()
+        Dim errors As New List(Of ImportErrorEntry)()
+        errors.Add(New ImportErrorEntry("受信トレイ", "msg1", "件名1", Nothing))
+        errors.Add(New ImportErrorEntry("受信トレイ", "msg2", "件名2", Nothing))
+        errors.Add(New ImportErrorEntry("受信トレイ", "msg3", "件名3", "エラーA"))
+
+        Dim summary As List(Of KeyValuePair(Of String, Integer)) = ImportLogWriter.SummarizeErrors(errors)
+
+        Assert.AreEqual(2, summary.Count)
+        Assert.AreEqual("(不明)", summary(0).Key)
+        Assert.AreEqual(2, summary(0).Value)
+        Assert.AreEqual("エラーA", summary(1).Key)
+        Assert.AreEqual(1, summary(1).Value)
+    End Sub
+
+    <Test>
+    Public Sub SummarizeErrors_EmptyErrorMessage_GroupedAsUnknown()
+        Dim errors As New List(Of ImportErrorEntry)()
+        errors.Add(New ImportErrorEntry("受信トレイ", "msg1", "件名1", ""))
+
+        Dim summary As List(Of KeyValuePair(Of String, Integer)) = ImportLogWriter.SummarizeErrors(errors)
+
+        Assert.AreEqual(1, summary.Count)
+        Assert.AreEqual("(不明)", summary(0).Key)
+        Assert.AreEqual(1, summary(0).Value)
+    End Sub
+
     ' ── WriteErrorLog ───────────────────────────────────────
 
     <Test>

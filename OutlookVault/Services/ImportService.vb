@@ -37,7 +37,7 @@ Namespace Services
             Me.Subject = subject
             Me.ReceivedDate = receivedDate
             Me.SenderName = senderName
-            Me.ErrorMessage = errorMessage
+            Me.ErrorMessage = If(errorMessage, "")
         End Sub
     End Class
 

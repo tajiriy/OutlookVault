@@ -54,7 +54,7 @@ Namespace Services
         Public Shared Function SummarizeErrors(errors As List(Of ImportErrorEntry)) As List(Of KeyValuePair(Of String, Integer))
             Dim counts As New Dictionary(Of String, Integer)()
             For Each entry As ImportErrorEntry In errors
-                Dim key As String = entry.ErrorMessage
+                Dim key As String = If(String.IsNullOrEmpty(entry.ErrorMessage), "(不明)", entry.ErrorMessage)
                 If counts.ContainsKey(key) Then
                     counts(key) += 1
                 Else
