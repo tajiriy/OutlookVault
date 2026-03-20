@@ -4,15 +4,15 @@
 
 | ステータス | Critical | High | Medium | Low | 計 |
 |-----------|----------|------|--------|-----|-----|
-| open | - | 2 | 4 | 4 | 10 |
+| open | - | 1 | 4 | 4 | 9 |
 | in-progress | - | - | - | - | 0 |
-| done | 1 | 10 | 23 | 10 | 44 |
+| done | 1 | 11 | 23 | 10 | 45 |
 | wontfix | - | - | 3 | 1 | 4 |
 | deferred | - | - | 1 | 1 | 2 |
 | invalid | - | - | 1 | - | 1 |
 | **計** | **1** | **12** | **32** | **16** | **61** |
 
-<!-- open:10 done:44 wontfix:4 deferred:2 invalid:1 = 61 -->
+<!-- open:9 done:45 wontfix:4 deferred:2 invalid:1 = 61 -->
 
 ## カテゴリ
 
@@ -1032,18 +1032,19 @@
 
 | 項目 | 値 |
 |------|-----|
-| ステータス | open |
+| ステータス | done |
 | 優先度 | High |
 | カテゴリ | readability |
 | ソース | review |
 | 対象ファイル | OutlookVault/Services/ImportService.vb |
 | 登録日 | 2026-03-20 |
+| 修正日 | 2026-03-20 |
 
 **内容:** `ImportFolder`（行129〜286）が3段階にネストした `Try...Finally`（137、168、181行目）で構成されている。VB.NET では早期 `Return` でも `Finally` は実行されるため現時点でリークはないが、構造が視覚的に整合しておらず将来の変更でバグ混入リスクが高い。R-041（items Nothing 到達経路）は対応済みだが、全体構造の複雑さは残っている。
 
-**対策:** `perfConn` の取得と解放を `Using` に整理し、メインループ部分を別メソッド（`RunImportLoop`）に抽出してネスト深度を下げる。`folder` の `Finally` を最外 `Try` に一本化する。
+**対策:** メインループ部分を `RunImportLoop` メソッドに抽出し、バルクモードの BeginBulk/CommitBulk/RollbackBulk を同メソッド内に集約。ImportFolder のネストを3段→2段に削減（folder 解放 Try + perfConn/items 解放 Try）。インデントも正規化。
 
-**メモ:** R-010（責務過多）で4サブメソッドに分割済みだが、ネスト深度は未解消。
+**メモ:** R-010（責務過多）で4サブメソッドに分割済みだが、ネスト深度は未解消だった。本対応で解消。
 
 ---
 
@@ -1280,3 +1281,4 @@
 | 2026-03-19 | R-041〜R-050 | done: 5並列 refactor-worker で全10件を一括対応 |
 | 2026-03-20 | R-051〜R-061 | 5回目の code-reviewer レビューから 11 件を一括登録 |
 | 2026-03-20 | R-052 | done: SummarizeErrors の Nothing 防御とコンストラクタガード追加、テスト2件追加 |
+| 2026-03-20 | R-051 | done: ImportFolder のバルクループを RunImportLoop に抽出、ネスト3段→2段に削減 |
