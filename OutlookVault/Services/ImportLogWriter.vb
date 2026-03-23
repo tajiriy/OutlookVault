@@ -9,7 +9,7 @@ Namespace Services
 
     ''' <summary>
     ''' 取り込みエラーの詳細をログファイルに出力するクラス。
-    ''' exe と同じフォルダに import_errors_yyyyMMdd_HHmmss.log を生成する。
+    ''' Logger.LogDirectory に import_errors_yyyyMMdd_HHmmss.log を生成する。
     ''' </summary>
     Public Class ImportLogWriter
 
@@ -20,9 +20,12 @@ Namespace Services
         Public Shared Function WriteErrorLog(errors As List(Of ImportErrorEntry)) As String
             If errors Is Nothing OrElse errors.Count = 0 Then Return Nothing
 
-            Dim exeDir As String = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)
+            Dim logDir As String = Logger.LogDirectory
+            If Not Directory.Exists(logDir) Then
+                Directory.CreateDirectory(logDir)
+            End If
             Dim fileName As String = "import_errors_" & DateTime.Now.ToString("yyyyMMdd_HHmmss") & ".log"
-            Dim filePath As String = Path.Combine(exeDir, fileName)
+            Dim filePath As String = Path.Combine(logDir, fileName)
 
             Using sw As New StreamWriter(filePath, False, Encoding.UTF8)
                 sw.WriteLine("OutlookVault 取り込みエラーログ")

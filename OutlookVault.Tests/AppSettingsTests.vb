@@ -64,6 +64,14 @@ Public Class AppSettingsTests
         Assert.That(value, [Is].TypeOf(Of Boolean)())
     End Sub
 
+    ' ── ログディレクトリ設定テスト ──────────────────────────────
+
+    <Test>
+    Public Sub LogDirectory_DefaultValue_IsLogs()
+        Dim value As String = _settings.LogDirectory
+        Assert.That(value, [Is].EqualTo(".\logs"))
+    End Sub
+
     ' ── 閲覧ウィンドウ設定テスト ──────────────────────────────
 
     <Test>

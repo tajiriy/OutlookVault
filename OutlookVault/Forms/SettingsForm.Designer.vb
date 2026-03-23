@@ -27,6 +27,9 @@ Partial Class SettingsForm
         Me.lblAttachDir = New System.Windows.Forms.Label()
         Me.txtAttachDir = New System.Windows.Forms.TextBox()
         Me.btnBrowseAttach = New System.Windows.Forms.Button()
+        Me.lblLogDir = New System.Windows.Forms.Label()
+        Me.txtLogDir = New System.Windows.Forms.TextBox()
+        Me.btnBrowseLogDir = New System.Windows.Forms.Button()
         Me.grpAutoImport = New System.Windows.Forms.GroupBox()
         Me.chkAutoImportEnabled = New System.Windows.Forms.CheckBox()
         Me.rdoInterval = New System.Windows.Forms.RadioButton()
@@ -73,9 +76,12 @@ Partial Class SettingsForm
         Me.grpPaths.Controls.Add(Me.lblAttachDir)
         Me.grpPaths.Controls.Add(Me.txtAttachDir)
         Me.grpPaths.Controls.Add(Me.btnBrowseAttach)
+        Me.grpPaths.Controls.Add(Me.lblLogDir)
+        Me.grpPaths.Controls.Add(Me.txtLogDir)
+        Me.grpPaths.Controls.Add(Me.btnBrowseLogDir)
         Me.grpPaths.Location = New System.Drawing.Point(8, 8)
         Me.grpPaths.Name = "grpPaths"
-        Me.grpPaths.Size = New System.Drawing.Size(488, 94)
+        Me.grpPaths.Size = New System.Drawing.Size(488, 124)
         Me.grpPaths.TabIndex = 0
         Me.grpPaths.TabStop = False
         Me.grpPaths.Text = "保存先"
@@ -126,6 +132,29 @@ Partial Class SettingsForm
         Me.btnBrowseAttach.TabIndex = 5
         Me.btnBrowseAttach.Text = "参照..."
         '
+        'lblLogDir
+        '
+        Me.lblLogDir.AutoSize = True
+        Me.lblLogDir.Location = New System.Drawing.Point(8, 86)
+        Me.lblLogDir.Name = "lblLogDir"
+        Me.lblLogDir.Size = New System.Drawing.Size(93, 13)
+        Me.lblLogDir.Text = "ログフォルダ:"
+        '
+        'txtLogDir
+        '
+        Me.txtLogDir.Location = New System.Drawing.Point(132, 83)
+        Me.txtLogDir.Name = "txtLogDir"
+        Me.txtLogDir.Size = New System.Drawing.Size(256, 22)
+        Me.txtLogDir.TabIndex = 7
+        '
+        'btnBrowseLogDir
+        '
+        Me.btnBrowseLogDir.Location = New System.Drawing.Point(396, 82)
+        Me.btnBrowseLogDir.Name = "btnBrowseLogDir"
+        Me.btnBrowseLogDir.Size = New System.Drawing.Size(80, 24)
+        Me.btnBrowseLogDir.TabIndex = 8
+        Me.btnBrowseLogDir.Text = "参照..."
+        '
         'grpAutoImport
         '
         Me.chkSyncDeletions = New System.Windows.Forms.CheckBox()
@@ -150,7 +179,7 @@ Partial Class SettingsForm
         Me.grpAutoImport.Controls.Add(Me.numDiffBuffer)
         Me.grpAutoImport.Controls.Add(Me.lblDiffBufferUnit)
         Me.grpAutoImport.Controls.Add(Me.chkSyncDeletions)
-        Me.grpAutoImport.Location = New System.Drawing.Point(8, 248)
+        Me.grpAutoImport.Location = New System.Drawing.Point(8, 278)
         Me.grpAutoImport.Name = "grpAutoImport"
         Me.grpAutoImport.Size = New System.Drawing.Size(488, 205)
         Me.grpAutoImport.TabIndex = 2
@@ -300,7 +329,7 @@ Partial Class SettingsForm
         '
         Me.grpFolders.Controls.Add(Me.lstFolders)
         Me.grpFolders.Controls.Add(Me.btnSelectFolders)
-        Me.grpFolders.Location = New System.Drawing.Point(8, 110)
+        Me.grpFolders.Location = New System.Drawing.Point(8, 140)
         Me.grpFolders.Name = "grpFolders"
         Me.grpFolders.Size = New System.Drawing.Size(488, 130)
         Me.grpFolders.TabIndex = 1
@@ -329,7 +358,7 @@ Partial Class SettingsForm
         Me.grpDisplay.Controls.Add(Me.chkSortAscending)
         Me.grpDisplay.Controls.Add(Me.chkShowImportResult)
         Me.grpDisplay.Controls.Add(Me.chkShowImportErrorDialog)
-        Me.grpDisplay.Location = New System.Drawing.Point(8, 461)
+        Me.grpDisplay.Location = New System.Drawing.Point(8, 491)
         Me.grpDisplay.Name = "grpDisplay"
         Me.grpDisplay.Size = New System.Drawing.Size(488, 118)
         Me.grpDisplay.TabIndex = 3
@@ -382,7 +411,7 @@ Partial Class SettingsForm
         Me.grpTrash.Controls.Add(Me.lblTrashDays)
         Me.grpTrash.Controls.Add(Me.numTrashDays)
         Me.grpTrash.Controls.Add(Me.lblTrashDaysUnit)
-        Me.grpTrash.Location = New System.Drawing.Point(8, 587)
+        Me.grpTrash.Location = New System.Drawing.Point(8, 617)
         Me.grpTrash.Name = "grpTrash"
         Me.grpTrash.Size = New System.Drawing.Size(488, 52)
         Me.grpTrash.TabIndex = 7
@@ -423,7 +452,7 @@ Partial Class SettingsForm
         Me.grpTray.Controls.Add(Me.chkMinimizeToTray)
         Me.grpTray.Controls.Add(Me.chkCloseToTray)
         Me.grpTray.Controls.Add(Me.chkShowBalloonOnImport)
-        Me.grpTray.Location = New System.Drawing.Point(8, 647)
+        Me.grpTray.Location = New System.Drawing.Point(8, 677)
         Me.grpTray.Name = "grpTray"
         Me.grpTray.Size = New System.Drawing.Size(488, 118)
         Me.grpTray.TabIndex = 6
@@ -469,7 +498,7 @@ Partial Class SettingsForm
         'grpData
         '
         Me.grpData.Controls.Add(Me.btnResetData)
-        Me.grpData.Location = New System.Drawing.Point(8, 773)
+        Me.grpData.Location = New System.Drawing.Point(8, 803)
         Me.grpData.Name = "grpData"
         Me.grpData.Size = New System.Drawing.Size(488, 56)
         Me.grpData.TabIndex = 5
@@ -488,7 +517,7 @@ Partial Class SettingsForm
         '
         Me.pnlButtons.Controls.Add(Me.btnOk)
         Me.pnlButtons.Controls.Add(Me.btnCancel)
-        Me.pnlButtons.Location = New System.Drawing.Point(8, 837)
+        Me.pnlButtons.Location = New System.Drawing.Point(8, 867)
         Me.pnlButtons.Name = "pnlButtons"
         Me.pnlButtons.Size = New System.Drawing.Size(488, 34)
         Me.pnlButtons.TabIndex = 4
@@ -517,7 +546,7 @@ Partial Class SettingsForm
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.Font = New System.Drawing.Font("Meiryo UI", 9.0!, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, CType(128, Byte))
         Me.CancelButton = Me.btnCancel
-        Me.ClientSize = New System.Drawing.Size(512, 879)
+        Me.ClientSize = New System.Drawing.Size(512, 909)
         Me.Controls.Add(Me.grpPaths)
         Me.Controls.Add(Me.grpFolders)
         Me.Controls.Add(Me.grpAutoImport)
@@ -557,6 +586,9 @@ Partial Class SettingsForm
     Friend WithEvents lblAttachDir As System.Windows.Forms.Label
     Friend WithEvents txtAttachDir As System.Windows.Forms.TextBox
     Friend WithEvents btnBrowseAttach As System.Windows.Forms.Button
+    Friend WithEvents lblLogDir As System.Windows.Forms.Label
+    Friend WithEvents txtLogDir As System.Windows.Forms.TextBox
+    Friend WithEvents btnBrowseLogDir As System.Windows.Forms.Button
     Friend WithEvents grpAutoImport As System.Windows.Forms.GroupBox
     Friend WithEvents chkAutoImportEnabled As System.Windows.Forms.CheckBox
     Friend WithEvents rdoInterval As System.Windows.Forms.RadioButton

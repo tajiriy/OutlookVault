@@ -33,6 +33,7 @@ Public Class SettingsForm
     Private Sub LoadSettings()
         txtDbPath.Text = _settings.DbFilePath
         txtAttachDir.Text = _settings.AttachmentDirectory
+        txtLogDir.Text = _settings.LogDirectory
         chkAutoImportEnabled.Checked = _settings.AutoImportEnabled
         If _settings.AutoImportMode = 1 Then
             rdoScheduled.Checked = True
@@ -82,6 +83,9 @@ Public Class SettingsForm
     Private Sub SaveSettings()
         _settings.DbFilePath = txtDbPath.Text.Trim()
         _settings.AttachmentDirectory = txtAttachDir.Text.Trim()
+        _settings.LogDirectory = txtLogDir.Text.Trim()
+        ' ログ出力先が変更された可能性があるのでキャッシュをクリア
+        Services.Logger.LogDirectory = Nothing
         _settings.AutoImportEnabled = chkAutoImportEnabled.Checked
         _settings.AutoImportMode = If(rdoScheduled.Checked, 1, 0)
         _settings.AutoImportIntervalMinutes = CInt(numInterval.Value)
@@ -172,6 +176,18 @@ Public Class SettingsForm
             End If
             If dlg.ShowDialog(Me) = System.Windows.Forms.DialogResult.OK Then
                 txtAttachDir.Text = dlg.SelectedPath
+            End If
+        End Using
+    End Sub
+
+    Private Sub btnBrowseLogDir_Click(sender As Object, e As System.EventArgs) Handles btnBrowseLogDir.Click
+        Using dlg As New System.Windows.Forms.FolderBrowserDialog()
+            dlg.Description = "ログファイルの出力先フォルダを選択してください"
+            If System.IO.Directory.Exists(txtLogDir.Text) Then
+                dlg.SelectedPath = txtLogDir.Text
+            End If
+            If dlg.ShowDialog(Me) = System.Windows.Forms.DialogResult.OK Then
+                txtLogDir.Text = dlg.SelectedPath
             End If
         End Using
     End Sub

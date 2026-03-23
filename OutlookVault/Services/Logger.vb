@@ -9,7 +9,7 @@ Namespace Services
 
     ''' <summary>
     ''' アプリケーション全体で使用するシンプルなファイルロガー。
-    ''' exe と同じフォルダに OutlookVault_yyyyMMdd.log を出力する。
+    ''' AppSettings.LogDirectory で指定されたフォルダに OutlookVault_yyyyMMdd.log を出力する。
     ''' スレッドセーフ。
     ''' </summary>
     Public Class Logger
@@ -21,8 +21,10 @@ Namespace Services
         Public Shared Property LogDirectory As String
             Get
                 If _logDirectory Is Nothing Then
-                    _logDirectory = Path.GetDirectoryName(
+                    Dim settingValue As String = Config.AppSettings.Instance.LogDirectory
+                    Dim exeDir As String = Path.GetDirectoryName(
                         System.Reflection.Assembly.GetExecutingAssembly().Location)
+                    _logDirectory = Path.GetFullPath(Path.Combine(exeDir, settingValue))
                 End If
                 Return _logDirectory
             End Get
@@ -61,6 +63,10 @@ Namespace Services
             SyncLock _lock
                 Try
                     Dim logPath As String = GetLogFilePath()
+                    Dim logDir As String = Path.GetDirectoryName(logPath)
+                    If Not Directory.Exists(logDir) Then
+                        Directory.CreateDirectory(logDir)
+                    End If
                     Dim line As String = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") &
                         " [" & level & "] " & message
                     Using sw As New StreamWriter(logPath, True, Encoding.UTF8)
