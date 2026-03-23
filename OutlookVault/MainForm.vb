@@ -84,10 +84,6 @@ Public Class MainForm
         Dim appIcon As Drawing.Icon = Services.FileHelper.GetAppIcon()
         If appIcon IsNot Nothing Then Me.Icon = appIcon
 
-        ' メール一覧高さ: 保存値があれば復元、なければコンテンツ領域の約 40%
-        Dim contentHeight As Integer = Me.ClientSize.Height - menuStrip.Height - toolStrip.Height - statusStrip.Height
-        splitRight.SplitterDistance = CInt(contentHeight * 0.4)
-
         Services.Logger.Info("アプリケーションを起動しました")
 
         InitializeServices()
@@ -101,11 +97,8 @@ Public Class MainForm
             splitMain.SplitterDistance = savedTreeWidth
         End If
 
-        ' メール一覧の高さを復元
-        Dim savedMailListHeight As Integer = _settings.MailListHeight
-        If savedMailListHeight > 0 AndAlso savedMailListHeight < splitRight.Height Then
-            splitRight.SplitterDistance = savedMailListHeight
-        End If
+        ' 閲覧ウィンドウの配置を復元
+        ApplyReadingPanePosition(_settings.ReadingPanePosition)
         SetupAutoImportTimer()
         SetupNotifyIcon()
         SetupEmailListColumns()
@@ -1647,7 +1640,7 @@ Public Class MainForm
         End If
 
         _settings.FolderTreeWidth = splitMain.SplitterDistance
-        _settings.MailListHeight = splitRight.SplitterDistance
+        SaveCurrentSplitterDistance()
         _settings.ConversationSplitterDistance = conversationView.SplitterDistance
     End Sub
 
@@ -1666,6 +1659,101 @@ Public Class MainForm
 
     Private Sub btnSettings_Click(sender As Object, e As EventArgs) Handles btnSettings.Click
         OpenSettingsDialog()
+    End Sub
+
+    ' ════════════════════════════════════════════════════════════
+    '  閲覧ウィンドウ切り替え
+    ' ════════════════════════════════════════════════════════════
+
+    Private Sub menuItemPaneRight_Click(sender As Object, e As EventArgs) Handles menuItemPaneRight.Click
+        ApplyReadingPanePosition("Right")
+    End Sub
+
+    Private Sub menuItemPaneBottom_Click(sender As Object, e As EventArgs) Handles menuItemPaneBottom.Click
+        ApplyReadingPanePosition("Bottom")
+    End Sub
+
+    Private Sub menuItemPaneOff_Click(sender As Object, e As EventArgs) Handles menuItemPaneOff.Click
+        ApplyReadingPanePosition("Off")
+    End Sub
+
+    ''' <summary>閲覧ウィンドウの配置を切り替える。</summary>
+    ''' <param name="position">"Bottom", "Right", "Off" のいずれか。</param>
+    Private Sub ApplyReadingPanePosition(position As String)
+        ' 現在のスプリッター位置を保存
+        SaveCurrentSplitterDistance()
+
+        Select Case position
+            Case "Right"
+                splitRight.Panel2Collapsed = False
+                splitRight.Orientation = Orientation.Vertical
+                ' 保存値があれば復元、なければ Panel 幅の 50%
+                Dim savedWidth As Integer = _settings.MailListWidth
+                If savedWidth > 0 AndAlso savedWidth < splitRight.Width Then
+                    splitRight.SplitterDistance = savedWidth
+                Else
+                    splitRight.SplitterDistance = CInt(splitRight.Width * 0.5)
+                End If
+                ShrinkColumnsIfNeeded()
+
+            Case "Off"
+                splitRight.Panel2Collapsed = True
+
+            Case Else ' "Bottom"
+                splitRight.Panel2Collapsed = False
+                splitRight.Orientation = Orientation.Horizontal
+                ' 保存値があれば復元、なければ高さの 40%
+                Dim savedHeight As Integer = _settings.MailListHeight
+                If savedHeight > 0 AndAlso savedHeight < splitRight.Height Then
+                    splitRight.SplitterDistance = savedHeight
+                Else
+                    splitRight.SplitterDistance = CInt(splitRight.Height * 0.4)
+                End If
+        End Select
+
+        _settings.ReadingPanePosition = position
+        UpdateReadingPaneMenuChecks()
+    End Sub
+
+    ''' <summary>現在の splitRight の SplitterDistance を向きに応じた設定に保存する。</summary>
+    Private Sub SaveCurrentSplitterDistance()
+        If splitRight.Panel2Collapsed Then Return
+        If splitRight.Orientation = Orientation.Horizontal Then
+            _settings.MailListHeight = splitRight.SplitterDistance
+        Else
+            _settings.MailListWidth = splitRight.SplitterDistance
+        End If
+    End Sub
+
+    ''' <summary>閲覧ウィンドウメニューのチェック状態を更新する。</summary>
+    Private Sub UpdateReadingPaneMenuChecks()
+        Dim pos As String = _settings.ReadingPanePosition
+        menuItemPaneRight.Checked = String.Equals(pos, "Right", StringComparison.OrdinalIgnoreCase)
+        menuItemPaneBottom.Checked = String.Equals(pos, "Bottom", StringComparison.OrdinalIgnoreCase)
+        menuItemPaneOff.Checked = String.Equals(pos, "Off", StringComparison.OrdinalIgnoreCase)
+    End Sub
+
+    ''' <summary>
+    ''' メール一覧の列合計幅が ListView 幅を超えている場合、比率で縮小する。
+    ''' 閲覧ウィンドウを「右」に切り替えた直後に列がはみ出すのを防ぐ。
+    ''' </summary>
+    Private Sub ShrinkColumnsIfNeeded()
+        Dim availableWidth As Integer = listViewEmails.ClientSize.Width
+        If availableWidth <= 0 Then Return
+
+        Dim totalWidth As Integer = 0
+        For i As Integer = 0 To listViewEmails.Columns.Count - 1
+            totalWidth += listViewEmails.Columns(i).Width
+        Next
+
+        If totalWidth <= availableWidth Then Return
+
+        Dim ratio As Double = CDbl(availableWidth) / CDbl(totalWidth)
+        For i As Integer = 0 To listViewEmails.Columns.Count - 1
+            Dim newWidth As Integer = CInt(listViewEmails.Columns(i).Width * ratio)
+            If newWidth < 20 Then newWidth = 20
+            listViewEmails.Columns(i).Width = newWidth
+        Next
     End Sub
 
     ''' <summary>設定ダイアログを表示し、結果に応じてアプリケーション設定を反映する。</summary>

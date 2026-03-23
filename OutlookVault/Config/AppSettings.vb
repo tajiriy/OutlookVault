@@ -28,6 +28,17 @@ Namespace Config
 
         ' ── DB / ファイルパス ──────────────────────────────────────
 
+        ''' <summary>ログファイルの出力ディレクトリ</summary>
+        Public Property LogDirectory As String
+            Get
+                Dim val As String = ConfigurationManager.AppSettings("LogDirectory")
+                Return If(String.IsNullOrEmpty(val), ".\logs", val)
+            End Get
+            Set(value As String)
+                SaveSetting("LogDirectory", value)
+            End Set
+        End Property
+
         ''' <summary>SQLite データベースファイルのパス</summary>
         Public Property DbFilePath As String
             Get
@@ -308,13 +319,34 @@ Namespace Config
             End Set
         End Property
 
-        ''' <summary>メール一覧の高さ（splitRight の SplitterDistance）</summary>
+        ''' <summary>閲覧ウィンドウの位置（Bottom / Right / Off）</summary>
+        Public Property ReadingPanePosition As String
+            Get
+                Dim val As String = ConfigurationManager.AppSettings("ReadingPanePosition")
+                Return If(String.IsNullOrEmpty(val), "Bottom", val)
+            End Get
+            Set(value As String)
+                SaveSetting("ReadingPanePosition", value)
+            End Set
+        End Property
+
+        ''' <summary>メール一覧の高さ（splitRight の SplitterDistance、閲覧ウィンドウ「下」用）</summary>
         Public Property MailListHeight As Integer
             Get
                 Return GetInt("MailListHeight", defaultValue:=0)
             End Get
             Set(value As Integer)
                 SaveSetting("MailListHeight", value.ToString())
+            End Set
+        End Property
+
+        ''' <summary>メール一覧の幅（splitRight の SplitterDistance、閲覧ウィンドウ「右」用）</summary>
+        Public Property MailListWidth As Integer
+            Get
+                Return GetInt("MailListWidth", defaultValue:=0)
+            End Get
+            Set(value As Integer)
+                SaveSetting("MailListWidth", value.ToString())
             End Set
         End Property
 

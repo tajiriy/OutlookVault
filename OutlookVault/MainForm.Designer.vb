@@ -34,6 +34,11 @@ Partial Class MainForm
         Me.menuItemImportCancel = New System.Windows.Forms.ToolStripMenuItem()
         Me.menuItemErrorExclusion = New System.Windows.Forms.ToolStripMenuItem()
         Me.menuItemAutoDeleteRule = New System.Windows.Forms.ToolStripMenuItem()
+        Me.menuItemView = New System.Windows.Forms.ToolStripMenuItem()
+        Me.menuItemReadingPane = New System.Windows.Forms.ToolStripMenuItem()
+        Me.menuItemPaneRight = New System.Windows.Forms.ToolStripMenuItem()
+        Me.menuItemPaneBottom = New System.Windows.Forms.ToolStripMenuItem()
+        Me.menuItemPaneOff = New System.Windows.Forms.ToolStripMenuItem()
         Me.menuItemDev = New System.Windows.Forms.ToolStripMenuItem()
         Me.menuItemDevTableViewer = New System.Windows.Forms.ToolStripMenuItem()
         Me.menuItemDevAttachmentStats = New System.Windows.Forms.ToolStripMenuItem()
@@ -104,7 +109,7 @@ Partial Class MainForm
         '
         'menuStrip
         '
-        Me.menuStrip.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.menuItemFile, Me.menuItemImport, Me.menuItemDev, Me.menuItemHelp})
+        Me.menuStrip.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.menuItemFile, Me.menuItemImport, Me.menuItemView, Me.menuItemDev, Me.menuItemHelp})
         Me.menuStrip.Location = New System.Drawing.Point(0, 0)
         Me.menuStrip.Name = "menuStrip"
         Me.menuStrip.Size = New System.Drawing.Size(1397, 24)
@@ -169,6 +174,38 @@ Partial Class MainForm
         Me.menuItemAutoDeleteRule.Name = "menuItemAutoDeleteRule"
         Me.menuItemAutoDeleteRule.Size = New System.Drawing.Size(183, 22)
         Me.menuItemAutoDeleteRule.Text = "自動削除ルール(&R)..."
+        '
+        'menuItemView
+        '
+        Me.menuItemView.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.menuItemReadingPane})
+        Me.menuItemView.Name = "menuItemView"
+        Me.menuItemView.Size = New System.Drawing.Size(62, 20)
+        Me.menuItemView.Text = "表示(&V)"
+        '
+        'menuItemReadingPane
+        '
+        Me.menuItemReadingPane.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.menuItemPaneRight, Me.menuItemPaneBottom, Me.menuItemPaneOff})
+        Me.menuItemReadingPane.Name = "menuItemReadingPane"
+        Me.menuItemReadingPane.Size = New System.Drawing.Size(168, 22)
+        Me.menuItemReadingPane.Text = "閲覧ウィンドウ(&R)"
+        '
+        'menuItemPaneRight
+        '
+        Me.menuItemPaneRight.Name = "menuItemPaneRight"
+        Me.menuItemPaneRight.Size = New System.Drawing.Size(120, 22)
+        Me.menuItemPaneRight.Text = "右(&R)"
+        '
+        'menuItemPaneBottom
+        '
+        Me.menuItemPaneBottom.Name = "menuItemPaneBottom"
+        Me.menuItemPaneBottom.Size = New System.Drawing.Size(120, 22)
+        Me.menuItemPaneBottom.Text = "下(&B)"
+        '
+        'menuItemPaneOff
+        '
+        Me.menuItemPaneOff.Name = "menuItemPaneOff"
+        Me.menuItemPaneOff.Size = New System.Drawing.Size(120, 22)
+        Me.menuItemPaneOff.Text = "OFF(&O)"
         '
         'menuItemDev
         '
@@ -587,6 +624,11 @@ Partial Class MainForm
     Friend WithEvents menuItemAutoDeleteRule As System.Windows.Forms.ToolStripMenuItem
 
     Friend WithEvents menuItemSettings As System.Windows.Forms.ToolStripMenuItem
+    Friend WithEvents menuItemView As System.Windows.Forms.ToolStripMenuItem
+    Friend WithEvents menuItemReadingPane As System.Windows.Forms.ToolStripMenuItem
+    Friend WithEvents menuItemPaneRight As System.Windows.Forms.ToolStripMenuItem
+    Friend WithEvents menuItemPaneBottom As System.Windows.Forms.ToolStripMenuItem
+    Friend WithEvents menuItemPaneOff As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents menuItemDev As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents menuItemDevTableViewer As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents menuItemDevAttachmentStats As System.Windows.Forms.ToolStripMenuItem

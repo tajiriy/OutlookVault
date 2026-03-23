@@ -64,6 +64,20 @@ Public Class AppSettingsTests
         Assert.That(value, [Is].TypeOf(Of Boolean)())
     End Sub
 
+    ' ── 閲覧ウィンドウ設定テスト ──────────────────────────────
+
+    <Test>
+    Public Sub ReadingPanePosition_DefaultValue_IsBottom()
+        Dim value As String = _settings.ReadingPanePosition
+        Assert.That(value, [Is].EqualTo("Bottom"))
+    End Sub
+
+    <Test>
+    Public Sub MailListWidth_DefaultValue_IsZero()
+        Dim value As Integer = _settings.MailListWidth
+        Assert.That(value, [Is].TypeOf(Of Integer)())
+    End Sub
+
     ' ── フォルダ別列設定: SanitizeFolderKey テスト ──────────────
 
     <Test>
